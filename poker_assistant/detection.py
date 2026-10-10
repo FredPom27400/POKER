@@ -29,6 +29,13 @@ class Detection:
     turn_score: float | None = None
     wait_score: float | None = None
     boxes: list[tuple[int, int, int, int]] = field(default_factory=list)
+    bar_width: int = 1
+
+    @property
+    def layout(self) -> tuple[int, ...]:
+        """Disposition des boutons rouges : centres horizontaux arrondis à 1/20
+        de la barre. Change quand on passe p.ex. de CHECK/BET à FOLD/CALL/RAISE."""
+        return tuple(sorted(round(20 * (x + w / 2) / self.bar_width) for x, _, w, _ in self.boxes))
 
     def summary(self) -> str:
         s = f"tour={'OUI' if self.is_turn else 'non'} rouge={self.red_ratio:.3f} boutons={self.buttons}"
@@ -129,7 +136,7 @@ class TurnDetector:
         else:  # hybrid
             is_turn = color_ok and tpl_ok
 
-        return Detection(is_turn, ratio, len(boxes), ts, ws, boxes)
+        return Detection(is_turn, ratio, len(boxes), ts, ws, boxes, bar.shape[1])
 
 
 class Debouncer:
@@ -151,6 +158,9 @@ class Debouncer:
             if self._count >= self.frames:
                 self.state, self._count = raw, 0
         return self.state
+
+    def force(self, state: bool) -> None:
+        self.state, self._candidate, self._count = state, state, 0
 
 
 def annotate(table: np.ndarray, bar_cfg: dict, d: Detection) -> np.ndarray:

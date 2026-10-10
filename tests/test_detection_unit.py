@@ -102,9 +102,9 @@ def test_signature_sensitivity():
     assert change_ratio(base, signature(make_table(False, seed=1, board=3), BAR)) < thr
 
 
-def test_tracker_recall_on_change():
+def test_tracker_recall_on_table_change():
     clk = Clock()
-    tr = TurnTracker(dict(DEFAULTS["dedupe"], recall_on_change=True), clock=clk)
+    tr = TurnTracker(DEFAULTS["dedupe"], clock=clk)
     a = signature(make_table(True, seed=1, board=3), BAR)
     b = signature(make_table(True, seed=1, board=4), BAR)
     assert tr.should_call(True, a)
@@ -112,7 +112,44 @@ def test_tracker_recall_on_change():
     clk.t += 3
     assert not tr.should_call(True, b)  # changement pas encore stable
     clk.t += 0.5
+    assert not tr.should_call(True, b)
+    clk.t += 0.5
     assert tr.should_call(True, b)
+    assert "table" in tr.reason
+    tr.on_result(True)
+    for _ in range(6):
+        clk.t += 0.5
+        assert not tr.should_call(True, b)
+
+
+def test_tracker_recall_on_layout_but_not_hover():
+    clk = Clock()
+    cfg = dict(DEFAULTS["dedupe"], recall_on_table_change=False)
+    tr = TurnTracker(cfg, clock=clk)
+    a = signature(make_table(True, seed=1), BAR)
+    assert tr.should_call(True, a, (4, 10, 16))       # FOLD / CALL / RAISE
+    tr.on_result(True)
+    for _ in range(5):                                # souris sur un bouton : il perd son rouge
+        clk.t += 0.5
+        assert not tr.should_call(True, a, (4, 16))
+    for i in range(3):                                # CHECK / BET : nouvelle décision
+        clk.t += 0.5
+        assert tr.should_call(True, a, (6, 14)) is (i == 2)
+    assert "boutons" in tr.reason
+
+
+def test_tracker_max_calls_per_turn():
+    clk = Clock()
+    tr = TurnTracker(dict(DEFAULTS["dedupe"], max_calls_per_turn=2), clock=clk)
+    calls = 0
+    for board in (0, 3, 4, 5):
+        sig = signature(make_table(True, seed=1, board=board), BAR)
+        for _ in range(4):
+            clk.t += 1
+            if tr.should_call(True, sig):
+                calls += 1
+                tr.on_result(True)
+    assert calls == 2
 
 
 def test_tracker_retry_after_error():

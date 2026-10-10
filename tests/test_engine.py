@@ -51,6 +51,23 @@ def test_engine_calls_once_per_turn(tmp_path):
     assert (day / "decisions.jsonl").read_text(encoding="utf-8").count("\n") == 2
 
 
+def test_engine_preaction_bar_blinks_one_frame(tmp_path):
+    """Les adversaires jouent en pré-action : la barre ne disparaît qu'une frame."""
+    calls = []
+    eng = Engine(make_cfg(), None, lambda img: calls.append(1) or Advice(True, "ok"), DecisionLogger(tmp_path))
+    preflop, flop = make_table(True, seed=1, board=0), make_table(True, seed=1, board=3)
+    run_frames(eng, [preflop] * 3 + [make_table(False, seed=1, board=0)] + [flop] * 4)
+    assert len(calls) == 2
+
+
+def test_engine_preaction_bar_never_disappears(tmp_path):
+    calls = []
+    eng = Engine(make_cfg(), None, lambda img: calls.append(1) or Advice(True, "ok"), DecisionLogger(tmp_path))
+    preflop, flop = make_table(True, seed=1, board=0), make_table(True, seed=1, board=3)
+    run_frames(eng, [preflop] * 4 + [flop] * 5)
+    assert len(calls) == 2
+
+
 def test_engine_survives_exceptions(tmp_path):
     n = []
 

@@ -61,9 +61,14 @@ class Engine:
         table = self.grab()
         d = self.detector.detect(table)
         is_turn = self.debouncer.update(d.is_turn)
+        if not d.is_turn and self.cfg["detection"]["fast_turn_end"]:
+            # La barre peut ne disparaître qu'un instant si les adversaires ont
+            # pré-cliqué : une seule frame sans boutons termine le tour.
+            self.debouncer.force(False)
+            is_turn = False
         was_turn = self.tracker.in_turn
-        if self.tracker.should_call(is_turn, signature(table, self.cfg["action_bar"])):
-            console(f"Mon tour détecté ({d.summary()}) -> analyse…")
+        if self.tracker.should_call(is_turn, signature(table, self.cfg["action_bar"]), d.layout):
+            console(f"Mon tour : {self.tracker.reason} ({d.summary()}) -> analyse…")
             self._emit("thinking", "Analyse en cours…")
             if self.ask is None:
                 self._results.put((table, Advice(True, "(dry-run : pas d'appel API)")))

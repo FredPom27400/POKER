@@ -40,11 +40,16 @@ DEFAULTS: dict[str, Any] = {
         "template_wait": "templates/wait_bar.png",
         "template_min_score": 0.35,
         "stable_frames": 2,         # frames consécutives pour valider un changement
+        "fast_turn_end": True,      # une seule frame sans boutons suffit à finir le tour
     },
     "dedupe": {
         "change_ratio": 0.002,      # part de pixels changés = nouvelle situation
         "pixel_delta": 25,          # écart de gris pour qu'un pixel compte comme changé
-        "recall_on_change": False,  # rappeler l'API si la table change pendant le tour
+        # Nouvelle décision sans que la barre disparaisse (adversaires en pré-action) :
+        "recall_on_table_change": True,  # table changée puis stable -> nouvel appel
+        "recall_on_layout": True,   # les boutons ont changé (CHECK/BET -> FOLD/CALL/RAISE)
+        "recall_stable_frames": 2,  # frames stables exigées avant de rappeler
+        "max_calls_per_turn": 3,    # plafond d'appels pour un même tour continu
         "min_seconds_between_calls": 2.0,
         "max_retries_per_turn": 2,
         "retry_delay": 3.0,

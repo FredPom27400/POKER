@@ -26,10 +26,14 @@ detection:
   template_wait: templates/wait_bar.png
   template_min_score: 0.35
   stable_frames: 2
+  fast_turn_end: true
 dedupe:
   change_ratio: 0.002
   pixel_delta: 25
-  recall_on_change: false
+  recall_on_table_change: true
+  recall_on_layout: true
+  recall_stable_frames: 2
+  max_calls_per_turn: 3
   min_seconds_between_calls: 2.0
   max_retries_per_turn: 2
   retry_delay: 3.0

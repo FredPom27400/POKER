@@ -75,10 +75,22 @@ rouges). La barre « Présélection de la prochaine action » n'en contient pas.
 template « tour » qu'au template « attente ». Un changement d'état n'est validé qu'après
 `stable_frames` captures identiques.
 
-**Anti-doublon** : l'API n'est appelée qu'au passage « pas mon tour → mon tour », et seulement si
-la table (barre d'actions masquée, donc sans le compte à rebours) a changé depuis le dernier appel.
-Un clignotement de la barre ne déclenche donc rien. Avec `dedupe.recall_on_change: true`, un nouvel
-appel a aussi lieu si la table change nettement pendant ton tour.
+**Anti-doublon** : l'API est appelée au passage « pas mon tour → mon tour », si la table
+(barre d'actions masquée, donc sans le compte à rebours) a changé depuis le dernier appel.
+Un clignotement de la barre ne déclenche donc rien.
+
+**Adversaires en pré-action** : quand les autres joueurs ont pré-cliqué, ta barre ne disparaît
+qu'un instant, voire pas du tout. Trois mécanismes repèrent quand même la nouvelle décision :
+- `detection.fast_turn_end` : une seule capture sans boutons suffit à clore le tour ;
+- `dedupe.recall_on_layout` : les boutons rouges changent (CHECK/BET → FOLD/CALL/RAISE) ;
+  un bouton qui perd simplement son rouge au survol de la souris est ignoré ;
+- `dedupe.recall_on_table_change` : la table (board, mises, pot) a changé puis s'est stabilisée
+  pendant `recall_stable_frames` captures.
+
+Au plus `max_calls_per_turn` appels pour un même tour continu. La console indique la raison de
+chaque appel (« nouveau tour », « boutons modifiés », « table modifiée »). Si tu vois
+« table modifiée pendant le tour » alors que rien n'a bougé (animation, chrono autour de
+l'avatar…), passe `recall_on_table_change` à `false`.
 
 **Erreurs API** : timeout, limite de requêtes (429), surcharge et coupures réseau sont réessayés
 par le SDK (`claude.max_retries`), puis par l'outil jusqu'à `dedupe.max_retries_per_turn` fois,

@@ -36,8 +36,12 @@ class TurnTracker:
 
     * nouveau tour (transition non -> oui) : appel, sauf si la table est
       identique à celle du dernier appel (clignotement de la barre) ;
-    * pendant un tour : aucun nouvel appel, sauf si recall_on_change est
-      activé et que la table a changé puis est restée stable ;
+    * tour « continu » (la barre ne disparaît pas car les adversaires ont joué
+      en pré-action) : nouvel appel si, de façon stable sur quelques frames,
+        - les boutons rouges ont changé de disposition (recall_on_layout),
+          sauf s'il en manque simplement un (survol de la souris) ;
+        - ou la table a changé depuis le dernier appel (recall_on_table_change) ;
+      dans la limite de max_calls_per_turn ;
     * après une erreur API : nouvel essai limité, espacé de retry_delay.
     """
 
@@ -46,19 +50,31 @@ class TurnTracker:
         self.clock = clock
         self.in_turn = False
         self.last_sig: np.ndarray | None = None    # empreinte du dernier appel
+        self.last_layout: tuple = ()
         self.last_call_t = -1e9
         self.pending = False
         self.retries = 0
         self.retry_at: float | None = None
-        self._prev_sig: np.ndarray | None = None   # pour vérifier la stabilité
+        self.calls_this_turn = 0
+        self.reason = ""
+        self._prev: tuple | None = None            # (sig, layout) de la frame précédente
+        self._stable = 0
 
     def _changed(self, a, b) -> bool:
         return change_ratio(a, b, self.cfg["pixel_delta"]) > self.cfg["change_ratio"]
 
-    def should_call(self, is_turn: bool, sig: np.ndarray) -> bool:
+    def _layout_changed(self, layout: tuple) -> bool:
+        if not layout or layout == self.last_layout:
+            return False
+        return not set(layout) <= set(self.last_layout)   # bouton manquant = survol
+
+    def should_call(self, is_turn: bool, sig: np.ndarray, layout: tuple = ()) -> bool:
         now = self.clock()
-        stable = not self._changed(sig, self._prev_sig)
-        self._prev_sig = sig
+        if self._prev is not None and self._prev[1] == layout and not self._changed(sig, self._prev[0]):
+            self._stable += 1
+        else:
+            self._stable = 0
+        self._prev = (sig, layout)
 
         if not is_turn:
             self.in_turn = False
@@ -67,26 +83,40 @@ class TurnTracker:
 
         new_turn = not self.in_turn
         self.in_turn = True
+        if new_turn:
+            self.calls_this_turn = 0
         if self.pending:
             return False
         if now - self.last_call_t < self.cfg["min_seconds_between_calls"]:
             return False
 
         changed = self._changed(sig, self.last_sig)
-        if new_turn and changed:
-            return self._fire(sig, now, reset=True)
-        if not new_turn and changed and stable and self.cfg.get("recall_on_change"):
-            return self._fire(sig, now, reset=True)
+        if new_turn:
+            if changed:
+                return self._fire(sig, layout, now, "nouveau tour")
+            self.last_layout = layout or self.last_layout
+            return False
         if self.retry_at is not None and now >= self.retry_at:
-            return self._fire(sig, now, reset=False)
+            return self._fire(sig, layout, now, "nouvel essai", reset=False)
+        if self.calls_this_turn >= self.cfg["max_calls_per_turn"]:
+            return False
+        if self._stable < self.cfg["recall_stable_frames"]:
+            return False
+        if self.cfg.get("recall_on_layout") and self._layout_changed(layout):
+            return self._fire(sig, layout, now, "boutons modifiés pendant le tour")
+        if self.cfg.get("recall_on_table_change") and changed:
+            return self._fire(sig, layout, now, "table modifiée pendant le tour")
         return False
 
-    def _fire(self, sig, now, reset: bool) -> bool:
+    def _fire(self, sig, layout, now, reason: str, reset: bool = True) -> bool:
         if reset:
             self.retries = 0
+        self.reason = reason
         self.retry_at = None
         self.last_sig = sig
+        self.last_layout = layout
         self.last_call_t = now
+        self.calls_this_turn += 1
         self.pending = True
         return True
 
