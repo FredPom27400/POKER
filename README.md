@@ -45,6 +45,8 @@ les scores de template, et signale les erreurs. Tu peux aussi tester en direct s
 
 ## 3. Utilisation
 
+Sous Windows, double-clique sur `lancer.bat` (et `calibrer.bat` pour la calibration) : pas besoin d'ouvrir l'invite de commandes dans le bon dossier.
+
 ```bash
 python main.py            # fenêtre + console
 python main.py --no-ui    # console seule
