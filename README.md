@@ -96,6 +96,19 @@ chaque appel.
 par le SDK (`claude.max_retries`), puis par l'outil jusqu'à `dedupe.max_retries_per_turn` fois,
 tant que c'est encore ton tour. La boucle continue quoi qu'il arrive.
 
+## Choisir le modèle le plus rapide
+
+```bash
+python benchmark.py          # ou double-clic sur comparer.bat
+```
+Envoie tes 3 dernières captures (dossier `logs/`) à plusieurs réglages (Opus rapide/normal,
+Sonnet 5.5 avec/sans réflexion, Haiku 5.5) et affiche le temps et le conseil de chacun.
+Coût : quelques centimes. Recopie ensuite le réglage choisi dans `config.yaml`.
+
+La console indique pour chaque conseil le temps total, le délai avant le premier mot (le temps
+de réflexion du modèle) et le nombre de tokens générés : c'est la réflexion qui coûte le plus
+de temps. Opus 5.5 réfléchit toujours ; `thinking: off` la coupe sur Sonnet 5.5 et Haiku 5.5.
+
 ## Réglages utiles (`config.yaml`)
 
 - `claude.model` / `claude.effort` / `claude.speed` : modèle (défaut `claude-opus-5-5`), effort

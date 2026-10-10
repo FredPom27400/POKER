@@ -129,7 +129,7 @@ def turn(reason: str, detail: str) -> None:
     _out(c("  Analyse en cours…", GREY))
 
 
-def advice(text: str, seconds: float = 0.0, model: str = "") -> None:
+def advice(text: str, timing: str = "", model: str = "") -> None:
     action, reason, notes = parse_advice(text)
     _out()
     if action:
@@ -140,7 +140,7 @@ def advice(text: str, seconds: float = 0.0, model: str = "") -> None:
         _out(_labelled("NOTE", n, YELLOW, YELLOW))
     if not action and not reason and not notes:
         _out(text)
-    meta = [m for m in (f"{seconds:.1f} s" if seconds else "", model) if m]
+    meta = [m for m in (timing, model) if m]
     if meta:
         _out(c(f"  temps {' · '.join(meta)}", GREY))
     _out(_rule())

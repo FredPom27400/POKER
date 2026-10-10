@@ -14,6 +14,7 @@ DEFAULTS: dict[str, Any] = {
     "claude": {
         "model": "claude-opus-5-5",
         "effort": "low",            # low = réponse rapide
+        "thinking": "auto",         # off = sans réflexion (Sonnet 5.5 / Haiku 5.5 seulement)
         "speed": "fast",            # fast = mode rapide d'Opus (même modèle, ~2x le prix) ; normal sinon
         "max_tokens": 4000,
         "timeout": 30,              # secondes

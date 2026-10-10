@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 from pathlib import Path
@@ -111,9 +112,8 @@ class FakeMessages:
 
 
 def advisor_with(behaviour, **cfg):
-    adv = ClaudeAdvisor.__new__(ClaudeAdvisor)
-    adv.cfg = dict(DEFAULTS["claude"], **cfg)
-    adv.fast = adv.cfg.get("speed") == "fast"
+    os.environ.setdefault("ANTHROPIC_API_KEY", "test")
+    adv = ClaudeAdvisor(dict(DEFAULTS["claude"], **cfg))
     msgs = FakeMessages(behaviour)
     adv.client = SimpleNamespace(beta=SimpleNamespace(messages=msgs))
     return adv, msgs
@@ -121,6 +121,7 @@ def advisor_with(behaviour, **cfg):
 
 def ok_resp(text="ACTION : Fold\nRAISON : x", stop="end_turn"):
     return SimpleNamespace(stop_reason=stop, model="claude-opus-5-5",
+                           usage=SimpleNamespace(output_tokens=42, speed="fast"),
                            content=[SimpleNamespace(type="thinking"), SimpleNamespace(type="text", text=text)])
 
 
@@ -137,6 +138,29 @@ def test_advisor_success_request_shape():
     assert msgs.kwargs["fallbacks"] == "default"
     assert msgs.kwargs["speed"] == "fast" and "fast-mode-2026-02-01" in msgs.kwargs["betas"]
     assert msgs.kwargs["output_config"] == {"effort": "low"}
+
+
+def test_thinking_off_per_model():
+    adv, msgs = advisor_with(lambda kw: ok_resp(), model="claude-sonnet-5-5", thinking="off")
+    a = adv.ask(make_table(True))
+    assert a.ok and a.out_tokens == 42
+    kw = msgs.kwargs
+    assert kw["thinking"] == {"type": "between_tools"}
+    assert "speed" not in kw and "fallbacks" not in kw     # pas de mode rapide ni de repli sur Sonnet sans réflexion
+
+    adv, msgs = advisor_with(lambda kw: ok_resp(), model="claude-haiku-5-5", thinking="off")
+    adv.ask(make_table(True))
+    assert msgs.kwargs["thinking"] == {"type": "disabled"} and "fallbacks" not in msgs.kwargs
+
+    adv, msgs = advisor_with(lambda kw: ok_resp(), thinking="off")   # Opus : impossible, ignoré
+    adv.ask(make_table(True))
+    assert "thinking" not in msgs.kwargs and msgs.kwargs["speed"] == "fast"
+
+
+def test_timing_text():
+    from poker_assistant.claude_client import Advice as A
+    t = A(True, "x", seconds=9.8, first_text=8.9, out_tokens=640, fast=True).timing()
+    assert t == "9.8 s · dont 8.9 s avant le 1er mot · 640 tokens générés · mode rapide"
 
 
 def test_advisor_normal_speed():

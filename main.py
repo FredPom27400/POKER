@@ -51,7 +51,7 @@ def main() -> int:
         a = advisor.ask(table)
         logger.log(table, a.text, a.ok, a.model, a.error)
         if a.ok:
-            pretty.advice(a.text, a.seconds, a.model)
+            pretty.advice(a.text, a.timing(), a.model)
         else:
             pretty.error(a.error)
         return 0 if a.ok else 1

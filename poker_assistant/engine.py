@@ -108,7 +108,7 @@ class Engine:
                 return
             self.tracker.on_result(advice.ok)
             if advice.ok:
-                pretty.advice(advice.text, advice.seconds, advice.model)
+                pretty.advice(advice.text, advice.timing() if advice.seconds else "", advice.model)
                 self._emit("advice", advice.text)
             else:
                 retry = self.tracker.retry_at is not None
