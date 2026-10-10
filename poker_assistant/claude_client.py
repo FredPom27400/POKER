@@ -14,7 +14,7 @@ Format de réponse strict et court :
 - RAISON : 1 à 2 phrases maximum
 - Si une information est illisible ou incertaine, dis-le en une ligne au lieu d'inventer."""
 
-USER_TEXT = "C'est mon tour. Quelle est la meilleure action ?"
+USER_TEXT = "C'est mon tour. Quelle est la meilleure action ? Réponds en texte brut, sans markdown."
 
 
 @dataclass
@@ -78,6 +78,7 @@ class ClaudeAdvisor:
         if resp.stop_reason == "refusal":
             return Advice(False, "", resp.model, error="Requête refusée par le modèle")
         text = "\n".join(b.text for b in resp.content if b.type == "text").strip()
+        text = text.replace("**", "").replace("__", "")  # la fenêtre n'affiche pas le markdown
         if not text:
             return Advice(False, "", resp.model, error=f"Réponse vide (stop_reason={resp.stop_reason})")
         return Advice(True, text, resp.model)
