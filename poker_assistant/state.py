@@ -42,7 +42,9 @@ class TurnTracker:
       stable recall_stable_frames captures, ou si les boutons ont changé.
       Les timers ne déclenchent rien : un timer qui se vide ne change que
       quelques pixels par capture (pas brusque), et des chiffres qui défilent
-      changent toujours les mêmes pixels, marqués « volatils » et ignorés ;
+      changent toujours les mêmes pixels, marqués « volatils » et ignorés.
+      Un changement survenu pendant l'appel API est absorbé (tu n'as pas
+      encore pu jouer) ;
     * après une erreur API : nouvel essai limité, espacé de retry_delay.
     """
 
@@ -63,6 +65,7 @@ class TurnTracker:
         self._stable = 0
         self._counts: np.ndarray | None = None     # nb de changements par pixel
         self._jump: np.ndarray | None = None       # pixels touchés par un changement brusque
+        self._absorb = False                       # changement survenu pendant l'appel API
 
     def _changed(self, a, b) -> bool:
         return change_ratio(a, b, self.cfg["pixel_delta"]) > self.cfg["change_ratio"]
@@ -139,6 +142,14 @@ class TurnTracker:
             return False
         if self.cfg.get("recall_on_layout") and self._layout_changed(layout):
             return self._fire(sig, layout, now, "boutons modifiés")
+        if self._absorb:
+            # La table a bougé pendant que Claude répondait (animation, étiquette
+            # d'action qui s'efface…) : tu n'as pas encore pu jouer, ce n'est donc
+            # pas une nouvelle décision. On prend l'état stabilisé comme référence.
+            self._absorb = False
+            self.last_sig = sig
+            self._jump[:] = False
+            return False
         if self.cfg.get("recall_on_table_change") and self._jump_confirmed(sig):
             return self._fire(sig, layout, now, "table modifiée sans fin de tour visible")
         return False
@@ -159,6 +170,7 @@ class TurnTracker:
 
     def on_result(self, ok: bool) -> None:
         self.pending = False
+        self._absorb = self._jump is not None and bool(self._jump.any())
         if ok:
             return
         if self.retries < self.cfg["max_retries_per_turn"] and self.in_turn:

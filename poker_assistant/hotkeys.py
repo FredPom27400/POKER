@@ -15,5 +15,6 @@ def start_hotkey(combo: str, callback: Callable[[], object]):
         listener.start()
         return listener
     except Exception as e:  # noqa: BLE001 - toute erreur = raccourci désactivé
-        print(f"[raccourci] {combo} indisponible ({e}). Utilise le bouton Pause de la fenêtre.")
+        from . import pretty
+        pretty.warn(f"Raccourci {combo} indisponible ({e}). Utilise le bouton Pause de la fenêtre.")
         return None

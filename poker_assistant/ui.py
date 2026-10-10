@@ -5,6 +5,8 @@ import queue
 import tkinter as tk
 from typing import Callable
 
+from .pretty import action_hex, parse_advice
+
 
 class AdviceWindow:
     def __init__(self, cfg: dict, events: "queue.Queue[tuple[str, str]]",
@@ -50,7 +52,8 @@ class AdviceWindow:
             while True:
                 kind, msg = self.events.get_nowait()
                 if kind == "advice":
-                    self.text.config(text=msg, fg="white")
+                    action, _, _ = parse_advice(msg)
+                    self.text.config(text=msg, fg=action_hex(action) if action else "white")
                 elif kind == "error":
                     self.text.config(text=msg, fg="#ff7070")
                 elif kind == "thinking":

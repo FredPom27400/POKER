@@ -218,3 +218,35 @@ def test_full_screen_sample_cropping():
     assert test_detection.expected_from_name("montour_01.png") is True
     assert test_detection.expected_from_name("attente_presel.png") is False
     assert np.array_equal(test_detection.to_table(table, cfg["capture"]["region"]), table)
+
+
+def test_change_during_api_call_is_absorbed():
+    """Bug réel : la table bouge pendant que Claude répond (animation, étiquette
+    d'action qui s'efface) -> 2e appel « table modifiée » juste après la réponse."""
+    clk = Clock()
+    tr = TurnTracker(DEFAULTS["dedupe"], clock=clk)
+    def table(board, label):
+        img = make_table(True, seed=1, board=board)
+        if label:  # étiquette « RAISE » d'un adversaire, qui s'efface après quelques secondes
+            cv2.rectangle(img, (950, 120), (1110, 170), (0, 140, 255), -1)
+        return signature(img, BAR)
+
+    start, settled = table(3, True), table(3, False)
+    assert change_ratio(start, settled) > 2 * DEFAULTS["dedupe"]["change_ratio"]
+    assert tr.should_call(True, start)
+    for sig in [start, settled, settled, settled, settled]:     # pendant l'appel API
+        clk.t += 0.5
+        assert not tr.should_call(True, sig)
+    tr.on_result(True)
+    for _ in range(8):
+        clk.t += 0.5
+        assert not tr.should_call(True, settled)
+    # Une vraie nouvelle situation ensuite est toujours détectée.
+    turn_card = table(4, False)
+    calls = 0
+    for _ in range(4):
+        clk.t += 0.5
+        if tr.should_call(True, turn_card):
+            calls += 1
+            tr.on_result(True)
+    assert calls == 1

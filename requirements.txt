@@ -5,3 +5,4 @@ anthropic>=1.0
 pillow>=10.0
 pyyaml>=6.0
 pynput>=1.7
+colorama>=0.4.6

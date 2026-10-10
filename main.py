@@ -17,7 +17,8 @@ import threading
 import cv2
 
 from poker_assistant.config import DEFAULT_CONFIG_PATH, load_config, resolve
-from poker_assistant.engine import Engine, console
+from poker_assistant import pretty
+from poker_assistant.engine import Engine
 from poker_assistant.hotkeys import start_hotkey
 from poker_assistant.journal import DecisionLogger
 
@@ -49,7 +50,10 @@ def main() -> int:
             return 0
         a = advisor.ask(table)
         logger.log(table, a.text, a.ok, a.model, a.error)
-        print(f"({a.seconds:.1f} s)\n{a.text}" if a.ok else f"ERREUR : {a.error}")
+        if a.ok:
+            pretty.advice(a.text, a.seconds, a.model)
+        else:
+            pretty.error(a.error)
         return 0 if a.ok else 1
 
     from poker_assistant.capture import ScreenCapturer
@@ -59,15 +63,17 @@ def main() -> int:
     engine = Engine(cfg, cap.grab, advisor.ask if advisor else None, logger, events if use_ui else None)
     hotkey = cfg["ui"]["hotkey"]
     start_hotkey(hotkey, engine.toggle_pause)
-    console(f"Surveillance de {cap.bbox} toutes les {cfg['capture']['interval']} s "
-            f"— modèle {cfg['claude']['model']} — pause : {hotkey}")
+    pretty.banner(cap.bbox, cfg["capture"]["interval"], cfg["claude"]["model"],
+                  cfg["claude"].get("speed", "normal") if not args.dry_run else "dry-run", hotkey)
+    if args.dry_run:
+        pretty.warn("Mode dry-run : détection seule, aucun appel à l'API.")
 
     try:
         if use_ui:
             try:
                 from poker_assistant.ui import AdviceWindow
             except ImportError:
-                console("tkinter indisponible : mode console.")
+                pretty.warn("tkinter indisponible : mode console.")
                 use_ui = False
                 engine.events = None
         if use_ui:

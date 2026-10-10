@@ -90,7 +90,8 @@ class ClaudeAdvisor:
                     raise
                 # Mode rapide non disponible (modèle ou compte) : on le coupe pour la session.
                 self.fast = False
-                print(f"[mode rapide] indisponible ({e.status_code}), retour à la vitesse normale.")
+                from . import pretty
+                pretty.warn(f"Mode rapide indisponible ({e.status_code}) : retour à la vitesse normale.")
                 resp = self._request(kwargs, False, on_text)
             except anthropic.RateLimitError:
                 if not self.fast:
