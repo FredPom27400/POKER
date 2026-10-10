@@ -80,17 +80,17 @@ template « tour » qu'au template « attente ». Un changement d'état n'est va
 Un clignotement de la barre ne déclenche donc rien.
 
 **Adversaires en pré-action** : quand les autres joueurs ont pré-cliqué, ta barre ne disparaît
-qu'un instant, voire pas du tout. Trois mécanismes repèrent quand même la nouvelle décision :
-- `detection.fast_turn_end` : une seule capture sans boutons suffit à clore le tour ;
+qu'un instant, voire pas du tout. Une absence de `blink_frames` captures ou moins est traitée comme
+le même tour, et une nouvelle décision est repérée par :
 - `dedupe.recall_on_layout` : les boutons rouges changent (CHECK/BET → FOLD/CALL/RAISE) ;
   un bouton qui perd simplement son rouge au survol de la souris est ignoré ;
-- `dedupe.recall_on_table_change` : la table (board, mises, pot) a changé puis s'est stabilisée
-  pendant `recall_stable_frames` captures.
+- `dedupe.recall_on_table_change` : un changement **brusque** de la table (jetons, carte, fold)
+  resté stable `recall_stable_frames` captures. Les timers sont ignorés : un chrono qui se vide
+  ne change que quelques pixels par capture, et des chiffres qui défilent touchent toujours les
+  mêmes pixels, marqués comme volatils.
 
 Au plus `max_calls_per_turn` appels pour un même tour continu. La console indique la raison de
-chaque appel (« nouveau tour », « boutons modifiés », « table modifiée »). Si tu vois
-« table modifiée pendant le tour » alors que rien n'a bougé (animation, chrono autour de
-l'avatar…), passe `recall_on_table_change` à `false`.
+chaque appel.
 
 **Erreurs API** : timeout, limite de requêtes (429), surcharge et coupures réseau sont réessayés
 par le SDK (`claude.max_retries`), puis par l'outil jusqu'à `dedupe.max_retries_per_turn` fois,

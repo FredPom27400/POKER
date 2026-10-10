@@ -49,6 +49,7 @@ DEFAULTS: dict[str, Any] = {
         "recall_on_table_change": True,  # table changée puis stable -> nouvel appel
         "recall_on_layout": True,   # les boutons ont changé (CHECK/BET -> FOLD/CALL/RAISE)
         "recall_stable_frames": 2,  # frames stables exigées avant de rappeler
+        "blink_frames": 2,          # barre absente <= N captures = même tour (pré-action)
         "max_calls_per_turn": 3,    # plafond d'appels pour un même tour continu
         "min_seconds_between_calls": 2.0,
         "max_retries_per_turn": 2,

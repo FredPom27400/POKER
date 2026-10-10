@@ -83,15 +83,51 @@ def test_tracker_one_call_per_turn():
     for i in range(10):
         clk.t += 0.5
         assert not tr.should_call(True, a2 if i % 2 else a)
-    clk.t += 0.5
-    assert not tr.should_call(False, a)
+    for _ in range(3):                  # les adversaires jouent
+        clk.t += 0.5
+        assert not tr.should_call(False, a)
     clk.t += 0.5
     assert tr.should_call(True, b)     # nouveau tour, nouvelle table
     tr.on_result(True)
     clk.t += 0.5
     assert not tr.should_call(False, b)
-    clk.t += 3
-    assert not tr.should_call(True, b)  # barre qui clignote, table identique
+    for _ in range(6):                  # barre qui clignote, table identique
+        clk.t += 0.5
+        assert not tr.should_call(True, b)
+
+
+def _run_turn(tr, clk, tables):
+    calls = []
+    for i, t in enumerate(tables):
+        clk.t += 0.5
+        if tr.should_call(True, signature(t, BAR)):
+            calls.append((i, tr.reason))
+            tr.on_result(True)
+    return calls
+
+
+def test_seat_timer_ring_does_not_trigger():
+    """Bug réel : le chrono autour de l'avatar se vide -> « table modifiée »."""
+    clk = Clock()
+    tr = TurnTracker(DEFAULTS["dedupe"], clock=clk)
+    frames = [make_table(True, seed=1, ring=1 - i / 30) for i in range(30)]   # 15 s
+    assert _run_turn(tr, clk, frames) == [(0, "nouveau tour")]
+
+
+def test_seat_timer_digits_do_not_trigger():
+    clk = Clock()
+    tr = TurnTracker(DEFAULTS["dedupe"], clock=clk)
+    frames = [make_table(True, seed=1, seat_clock=20 - i // 2, ring=1 - i / 40) for i in range(40)]
+    assert _run_turn(tr, clk, frames) == [(0, "nouveau tour")]
+
+
+def test_preaction_jump_detected_despite_timer():
+    clk = Clock()
+    tr = TurnTracker(DEFAULTS["dedupe"], clock=clk)
+    frames = [make_table(True, seed=1, board=0, seat_clock=20 - i // 2, ring=1 - i / 20) for i in range(12)]
+    frames += [make_table(True, seed=1, board=3, seat_clock=20 - i // 2, ring=1 - i / 20) for i in range(6)]
+    calls = _run_turn(tr, clk, frames)
+    assert [c[0] for c in calls] == [0, 14]
 
 
 def test_signature_sensitivity():

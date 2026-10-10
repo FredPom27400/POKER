@@ -21,7 +21,10 @@ def _card(img, x, y, label, red):
 
 
 def make_table(turn: bool, seed: int = 0, board: int = 3, timer: int = 15,
-               w: int = W, h: int = H) -> np.ndarray:
+               w: int = W, h: int = H, ring: float | None = None,
+               seat_clock: int | None = None) -> np.ndarray:
+    """ring : fraction restante du chrono circulaire autour de mon avatar ;
+    seat_clock : secondes affichées à côté de mon avatar (hors barre d'actions)."""
     rng = np.random.default_rng(seed)
     img = np.full((h, w, 3), (35, 30, 25), np.uint8)
     cv2.ellipse(img, (w // 2, int(h * 0.45)), (int(w * 0.42), int(h * 0.33)), 0, 0, 360, (40, 110, 30), -1)
@@ -34,6 +37,14 @@ def make_table(turn: bool, seed: int = 0, board: int = 3, timer: int = 15,
         cv2.circle(img, c, 12, (40, 40, 210), -1)
     cv2.putText(img, f"Pot: {int(rng.integers(3, 80))} BB", (int(w * 0.44), int(h * 0.33)),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
+    seat = (int(w * 0.3), int(h * 0.78))  # mon avatar
+    cv2.circle(img, seat, 32, (90, 90, 90), -1)
+    if ring is not None and ring > 0:
+        cv2.ellipse(img, seat, (42, 42), -90, 0, 360 * ring, (0, 200, 255), 8)
+    if seat_clock is not None:
+        cv2.putText(img, f"{seat_clock:02d}", (seat[0] + 55, seat[1] + 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), 2)
 
     bx, by = int(BAR["x"] * w), int(BAR["y"] * h)
     bw, bh = int(BAR["width"] * w), int(BAR["height"] * h)
