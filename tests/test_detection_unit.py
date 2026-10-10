@@ -25,6 +25,13 @@ def test_color_detection(turn, seed):
         assert d.buttons == 3
 
 
+@pytest.mark.parametrize("gap", [2, 4, 8])
+def test_tightly_packed_buttons(gap):
+    """Bug réel (table Expresso) : boutons séparés de quelques pixels -> fusionnés en 1."""
+    d = TurnDetector(DET, BAR).detect(make_table(True, gap=gap))
+    assert d.is_turn and d.buttons == 3
+
+
 @pytest.mark.parametrize("size", [(960, 540), (1920, 1080)])
 def test_resolution_independent(size):
     det = TurnDetector(DET, BAR)

@@ -62,18 +62,41 @@ def crop_bar(table: np.ndarray, bar: dict) -> np.ndarray:
     return table[y:y + h, x:x + w]
 
 
-def red_mask(bgr: np.ndarray, det: dict) -> np.ndarray:
+def red_mask(bgr: np.ndarray, det: dict, close: bool = True) -> np.ndarray:
     hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
     h, s, v = cv2.split(hsv)
     hue_ok = (h <= det["red_hue_low"]) | (h >= det["red_hue_high"])
     mask = (hue_ok & (s >= det["red_sat_min"]) & (v >= det["red_val_min"])).astype(np.uint8) * 255
+    if not close:
+        return mask
     # Le texte blanc des boutons troue le masque : fermeture pour recoller.
     k = max(3, (min(bgr.shape[:2]) // 12) | 1)
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_RECT, (k, k)))
     return mask
 
 
+def _split_columns(raw: np.ndarray, box: tuple[int, int, int, int]) -> list[tuple[int, int, int, int]]:
+    """Découpe un bloc rouge en boutons séparés par de fines colonnes sombres.
+
+    Des boutons presque collés (quelques pixels d'écart) fusionnent après la
+    fermeture morphologique ; dans le masque brut, chaque colonne de séparateur
+    est quasi sans rouge, alors qu'une colonne traversant le texte blanc d'un
+    bouton reste majoritairement rouge.
+    """
+    x, y, w, h = box
+    cols = (raw[y:y + h, x:x + w] > 0).mean(axis=0) >= 0.25
+    out, start = [], None
+    for i, on in enumerate(np.append(cols, False)):
+        if on and start is None:
+            start = i
+        elif not on and start is not None:
+            out.append((x + start, y, i - start, h))
+            start = None
+    return out
+
+
 def red_buttons(bgr: np.ndarray, det: dict) -> tuple[float, list[tuple[int, int, int, int]]]:
+    raw = red_mask(bgr, det, close=False)
     mask = red_mask(bgr, det)
     area = mask.shape[0] * mask.shape[1]
     ratio = float(np.count_nonzero(mask)) / area
@@ -81,8 +104,11 @@ def red_buttons(bgr: np.ndarray, det: dict) -> tuple[float, list[tuple[int, int,
     boxes = []
     for i in range(1, n):
         x, y, w, h, a = stats[i]
-        if a >= det["min_button_area"] * area and w >= h * 0.8:  # boutons plutôt larges
-            boxes.append((int(x), int(y), int(w), int(h)))
+        if a < det["min_button_area"] * area:
+            continue
+        for bx, by, bw, bh in _split_columns(raw, (int(x), int(y), int(w), int(h))):
+            if bw * bh >= det["min_button_area"] * area and bw >= bh * 0.8:  # boutons plutôt larges
+                boxes.append((bx, by, bw, bh))
     return ratio, boxes
 
 

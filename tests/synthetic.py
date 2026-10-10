@@ -22,7 +22,7 @@ def _card(img, x, y, label, red):
 
 def make_table(turn: bool, seed: int = 0, board: int = 3, timer: int = 15,
                w: int = W, h: int = H, ring: float | None = None,
-               seat_clock: int | None = None) -> np.ndarray:
+               seat_clock: int | None = None, gap: int | None = None) -> np.ndarray:
     """ring : fraction restante du chrono circulaire autour de mon avatar ;
     seat_clock : secondes affichées à côté de mon avatar (hors barre d'actions)."""
     rng = np.random.default_rng(seed)
@@ -50,7 +50,7 @@ def make_table(turn: bool, seed: int = 0, board: int = 3, timer: int = 15,
     bw, bh = int(BAR["width"] * w), int(BAR["height"] * h)
     cv2.rectangle(img, (bx, by), (bx + bw, by + bh), (45, 40, 38), -1)
     if turn:
-        gap = bw // 40
+        gap = bw // 40 if gap is None else gap   # gap=4 : boutons presque collés (table Expresso)
         btn_w = (bw - 4 * gap) // 3
         for i, label in enumerate(["FOLD", "CALL 2", "RAISE TO 6"]):
             x0 = bx + gap + i * (btn_w + gap)
