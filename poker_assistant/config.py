@@ -14,6 +14,7 @@ DEFAULTS: dict[str, Any] = {
     "claude": {
         "model": "claude-opus-5-5",
         "effort": "low",            # low = réponse rapide
+        "speed": "fast",            # fast = mode rapide d'Opus (même modèle, ~2x le prix) ; normal sinon
         "max_tokens": 4000,
         "timeout": 30,              # secondes
         "max_retries": 2,           # retries automatiques du SDK (429, 5xx, réseau)

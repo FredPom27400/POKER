@@ -1,6 +1,7 @@
 """Boucle principale : capture -> détection -> appel Claude (une fois par tour)."""
 from __future__ import annotations
 
+import inspect
 import queue
 import threading
 import time
@@ -35,6 +36,7 @@ class Engine:
         self.stopped = threading.Event()
         self._results: "queue.Queue[tuple[np.ndarray, Advice]]" = queue.Queue()
         self._pool = ThreadPoolExecutor(max_workers=1)
+        self._streams = ask is not None and "on_text" in inspect.signature(ask).parameters
 
     # --- contrôle -------------------------------------------------------
     def toggle_pause(self) -> bool:
@@ -79,7 +81,10 @@ class Engine:
 
     def _call(self, table: np.ndarray) -> None:
         try:
-            advice = self.ask(table)
+            if self._streams:
+                advice = self.ask(table, on_text=lambda t: self._emit("advice", t))
+            else:
+                advice = self.ask(table)
         except Exception as e:  # noqa: BLE001 - la boucle ne doit jamais planter
             advice = Advice(False, "", error=f"Erreur inattendue : {e}")
         self._results.put((table, advice))
@@ -92,7 +97,8 @@ class Engine:
                 return
             self.tracker.on_result(advice.ok)
             if advice.ok:
-                console("\n" + advice.text)
+                secs = f" ({advice.seconds:.1f} s)" if advice.seconds else ""
+                console(f"Réponse{secs} :\n{advice.text}")
                 self._emit("advice", advice.text)
             else:
                 retry = " (nouvel essai prévu)" if self.tracker.retry_at is not None else ""

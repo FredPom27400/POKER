@@ -98,8 +98,11 @@ tant que c'est encore ton tour. La boucle continue quoi qu'il arrive.
 
 ## Réglages utiles (`config.yaml`)
 
-- `claude.model` / `claude.effort` : modèle (défaut `claude-opus-5-5`) et effort (`low` = le plus rapide).
-  Pour aller encore plus vite ou réduire le coût : `claude-sonnet-5-5` ou `claude-haiku-5-5`.
+- `claude.model` / `claude.effort` / `claude.speed` : modèle (défaut `claude-opus-5-5`), effort
+  (`low` = le plus rapide) et vitesse. `speed: fast` active le mode rapide d'Opus 5.5 : même
+  modèle donc même qualité, génération jusqu'à 2,5× plus rapide, mais prix ×2. S'il est refusé
+  ou saturé, l'outil repasse seul en vitesse normale. Pour réduire le coût, `speed: normal`.
+  La réponse s'affiche au fur et à mesure (streaming) et la console indique le temps de réponse.
 - Faux négatifs (tour non détecté) : baisse `detection.red_ratio_min` ou `min_buttons`, ou
   élargis `red_hue_low` / baisse `red_sat_min` si le rouge de ton client est terne.
 - Faux positifs : recalibre les templates, ou passe `detection.method` à `template`.

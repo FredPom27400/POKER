@@ -49,7 +49,7 @@ def main() -> int:
             return 0
         a = advisor.ask(table)
         logger.log(table, a.text, a.ok, a.model, a.error)
-        print(a.text if a.ok else f"ERREUR : {a.error}")
+        print(f"({a.seconds:.1f} s)\n{a.text}" if a.ok else f"ERREUR : {a.error}")
         return 0 if a.ok else 1
 
     from poker_assistant.capture import ScreenCapturer

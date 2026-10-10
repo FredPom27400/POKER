@@ -81,51 +81,123 @@ def test_engine_survives_exceptions(tmp_path):
     assert eng.tracker.retry_at is not None
 
 
+class FakeStream:
+    def __init__(self, resp):
+        self.resp = resp
+        self.text_stream = [b.text for b in resp.content if b.type == "text"]
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def get_final_message(self):
+        return self.resp
+
+
 class FakeMessages:
     def __init__(self, behaviour):
         self.behaviour = behaviour
-        self.kwargs = None
+        self.calls = []
 
-    def create(self, **kw):
-        self.kwargs = kw
-        return self.behaviour()
+    @property
+    def kwargs(self):
+        return self.calls[-1]
+
+    def stream(self, **kw):
+        self.calls.append(kw)
+        return FakeStream(self.behaviour(kw))
 
 
-def advisor_with(behaviour):
+def advisor_with(behaviour, **cfg):
     adv = ClaudeAdvisor.__new__(ClaudeAdvisor)
-    adv.cfg = DEFAULTS["claude"]
+    adv.cfg = dict(DEFAULTS["claude"], **cfg)
+    adv.fast = adv.cfg.get("speed") == "fast"
     msgs = FakeMessages(behaviour)
-    adv.client = SimpleNamespace(messages=msgs, beta=SimpleNamespace(messages=msgs))
+    adv.client = SimpleNamespace(beta=SimpleNamespace(messages=msgs))
     return adv, msgs
 
 
+def ok_resp(text="ACTION : Fold\nRAISON : x", stop="end_turn"):
+    return SimpleNamespace(stop_reason=stop, model="claude-opus-5-5",
+                           content=[SimpleNamespace(type="thinking"), SimpleNamespace(type="text", text=text)])
+
+
+REQ = httpx.Request("POST", "https://api.anthropic.com")
+
+
 def test_advisor_success_request_shape():
-    resp = SimpleNamespace(stop_reason="end_turn", model="claude-opus-5-5",
-                           content=[SimpleNamespace(type="thinking"),
-                                    SimpleNamespace(type="text", text="ACTION : Fold\nRAISON : x")])
-    adv, msgs = advisor_with(lambda: resp)
-    a = adv.ask(make_table(True, w=2400, h=1350))
-    assert a.ok and a.text.startswith("ACTION : Fold")
+    partial = []
+    adv, msgs = advisor_with(lambda kw: ok_resp("**ACTION :** Fold\nRAISON : x"))
+    a = adv.ask(make_table(True, w=2400, h=1350), on_text=partial.append)
+    assert a.ok and a.text.startswith("ACTION : Fold") and partial
     img = msgs.kwargs["messages"][0]["content"][0]
     assert img["type"] == "image" and img["source"]["media_type"] == "image/png"
     assert msgs.kwargs["fallbacks"] == "default"
+    assert msgs.kwargs["speed"] == "fast" and "fast-mode-2026-02-01" in msgs.kwargs["betas"]
     assert msgs.kwargs["output_config"] == {"effort": "low"}
 
 
+def test_advisor_normal_speed():
+    adv, msgs = advisor_with(lambda kw: ok_resp(), speed="normal")
+    assert adv.ask(make_table(True)).ok
+    assert "speed" not in msgs.kwargs and "fast-mode-2026-02-01" not in msgs.kwargs["betas"]
+
+
+def test_fast_mode_refused_falls_back_to_normal():
+    def behaviour(kw):
+        if kw.get("speed") == "fast":
+            raise anthropic.BadRequestError("speed not supported", response=httpx.Response(400, request=REQ), body=None)
+        return ok_resp()
+
+    adv, msgs = advisor_with(behaviour)
+    assert adv.ask(make_table(True)).ok
+    assert adv.fast is False                     # coupé pour la suite de la session
+    assert adv.ask(make_table(True)).ok
+    assert len(msgs.calls) == 3
+
+
+def test_fast_mode_rate_limited_retries_normal_once():
+    def behaviour(kw):
+        if kw.get("speed") == "fast":
+            raise anthropic.RateLimitError("rl", response=httpx.Response(429, request=REQ), body=None)
+        return ok_resp()
+
+    adv, _ = advisor_with(behaviour)
+    assert adv.ask(make_table(True)).ok
+    assert adv.fast is True                      # simple saturation : on garde le mode rapide
+
+
 def test_advisor_timeout_and_refusal():
-    def timeout():
-        raise anthropic.APITimeoutError(request=httpx.Request("POST", "https://api.anthropic.com"))
+    def timeout(kw):
+        raise anthropic.APITimeoutError(request=REQ)
 
     adv, _ = advisor_with(timeout)
     a = adv.ask(make_table(True))
     assert not a.ok and "timeout" in a.error.lower()
 
-    def rate_limit():
-        req = httpx.Request("POST", "https://api.anthropic.com")
-        raise anthropic.RateLimitError("rl", response=httpx.Response(429, request=req), body=None)
+    def rate_limit(kw):
+        raise anthropic.RateLimitError("rl", response=httpx.Response(429, request=REQ), body=None)
 
-    adv, _ = advisor_with(rate_limit)
+    adv, _ = advisor_with(rate_limit, speed="normal")
     assert "429" in adv.ask(make_table(True)).error
 
-    adv, _ = advisor_with(lambda: SimpleNamespace(stop_reason="refusal", model="m", content=[]))
+    adv, _ = advisor_with(lambda kw: ok_resp("", stop="refusal"))
     assert not adv.ask(make_table(True)).ok
+
+
+def test_engine_streams_partial_text(tmp_path):
+    import queue as q
+    events = q.Queue()
+
+    def ask(img, on_text=None):
+        on_text("ACTION : Call")
+        return Advice(True, "ACTION : Call\nRAISON : x", seconds=1.2)
+
+    eng = Engine(make_cfg(), None, ask, DecisionLogger(tmp_path), events)
+    run_frames(eng, [make_table(True)] * 2)
+    got = []
+    while not events.empty():
+        got.append(events.get())
+    assert ("advice", "ACTION : Call") in got
