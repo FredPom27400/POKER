@@ -11,12 +11,32 @@ import cv2
 import numpy as np
 
 SYSTEM_PROMPT = """Tu es un joueur professionnel de No Limit Hold'em cash game, spécialiste des tables à 6-9 joueurs et des stacks courts à moyens. À partir de la capture, lis : mes cartes, le board, le pot, les stacks (en BB), les mises en cours, la position du bouton, le nombre d'adversaires restants. Puis donne la meilleure action.
-Format de réponse strict et court :
-- ACTION : Fold / Check / Call / Bet X BB / Raise to X BB / All-in
-- RAISON : 1 à 2 phrases maximum
-- Si une information est illisible ou incertaine, dis-le en une ligne au lieu d'inventer."""
+
+Comment lire la table sur ce client (ces règles sont fiables, ne les présente pas comme des incertitudes) :
+- Moi = le joueur en bas au centre, le seul dont les cartes sont visibles.
+- Un adversaire est encore dans le coup s'il a des cartes face cachée devant son nom ; sans cartes, il a passé (fold).
+- L'étiquette sous un stack (CHECK, CALL, BET, RAISE, FOLD, SMALL BLIND, BIG BLIND…) est sa dernière action.
+- Les jetons accompagnés d'un montant « X BB » devant un joueur sont sa mise dans le tour d'enchères en cours.
+- « Pot total » inclut les mises en cours ; « Pot » seul (après le flop) ne les inclut pas.
+- Le jeu tourne dans le sens des aiguilles d'une montre : depuis moi (en bas), à gauche, puis en haut à gauche, en haut à droite, à droite, et retour à moi. Le jeton D marque le bouton ; les deux joueurs suivants dans ce sens sont la petite puis la grosse blinde. Déduis ma position de cet ordre.
+- Mes boutons en bas de l'écran disent ce que je peux faire : « CALL X BB » = montant à payer, « CHECK » = rien à payer, « BET » / « RAISE TO » = montant minimal.
+- Une capture ne montre pas tout l'historique : déduis l'action passée des mises, des étiquettes et du pot.
+
+Format de réponse strict et court, en texte brut :
+LECTURE : mes cartes | board | ma position | adversaires encore en jeu | montant à payer
+ACTION : Fold / Check / Call / Bet X BB / Raise to X BB / All-in
+RAISON : 1 à 2 phrases maximum
+NOTE : uniquement si une information illisible pourrait changer la décision, en une ligne ; n'invente jamais une information illisible."""
 
 USER_TEXT = "C'est mon tour. Quelle est la meilleure action ? Réponds en texte brut, sans markdown."
+
+
+def user_text(history: list[str] | None) -> str:
+    if not history:
+        return USER_TEXT
+    lines = "\n".join(f"- {h}" for h in history)
+    return (f"Mes analyses précédentes des dernières minutes, de la plus ancienne à la plus récente "
+            f"(c'est la même main si mes cartes sont identiques ; sinon, ignore-les) :\n{lines}\n\n{USER_TEXT}")
 
 
 @dataclass
@@ -101,14 +121,15 @@ class ClaudeAdvisor:
                     on_text(_clean(text))
             return stream.get_final_message()
 
-    def ask(self, table_bgr: np.ndarray, on_text: Callable[[str], None] | None = None) -> Advice:
+    def ask(self, table_bgr: np.ndarray, on_text: Callable[[str], None] | None = None,
+            history: list[str] | None = None) -> Advice:
         t0 = time.monotonic()
         timing: dict = {}
         png = encode_png(table_bgr, self.cfg["max_image_width"])
         content = [
             {"type": "image", "source": {"type": "base64", "media_type": "image/png",
                                          "data": base64.standard_b64encode(png).decode()}},
-            {"type": "text", "text": USER_TEXT},
+            {"type": "text", "text": user_text(history)},
         ]
         kwargs = dict(
             model=self.cfg["model"],

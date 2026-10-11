@@ -21,6 +21,7 @@ DEFAULTS: dict[str, Any] = {
         "max_retries": 2,           # retries automatiques du SDK (429, 5xx, réseau)
         "refusal_fallback": True,
         "max_image_width": 1600,
+        "history_seconds": 120,     # conseils récents renvoyés à Claude pour suivre la main (0 = off)
     },
     "capture": {
         "monitor": 1,               # index mss (1 = écran principal)

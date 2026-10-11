@@ -45,7 +45,10 @@ class Engine:
         self.stopped = threading.Event()
         self._results: "queue.Queue[tuple[np.ndarray, Advice]]" = queue.Queue()
         self._pool = ThreadPoolExecutor(max_workers=1)
-        self._streams = ask is not None and "on_text" in inspect.signature(ask).parameters
+        params = inspect.signature(ask).parameters if ask is not None else {}
+        self._streams = "on_text" in params
+        self._with_history = "history" in params
+        self._history: list[tuple[float, str]] = []   # (instant, résumé) des conseils récents
 
     # --- contrôle -------------------------------------------------------
     def toggle_pause(self) -> bool:
@@ -90,12 +93,25 @@ class Engine:
             if self.tracker.calls_this_turn:
                 pretty.info("Fin du tour, en attente du prochain…")
 
+    def _recent_history(self) -> list[str]:
+        """Conseils des dernières minutes, pour que Claude suive la main en cours."""
+        now, keep = time.monotonic(), self.cfg["claude"].get("history_seconds", 0)
+        self._history = [(t, h) for t, h in self._history if now - t <= keep]
+        return [f"il y a {now - t:.0f} s : {h}" for t, h in self._history]
+
+    def _remember(self, text: str) -> None:
+        f = pretty.parse_fields(text)
+        if f["action"]:
+            self._history.append((time.monotonic(), f"{f['lecture'] or '?'} → {f['action']}"))
+
     def _call(self, table: np.ndarray) -> None:
         try:
+            kwargs = {}
             if self._streams:
-                advice = self.ask(table, on_text=lambda t: self._emit("advice", t))
-            else:
-                advice = self.ask(table)
+                kwargs["on_text"] = lambda t: self._emit("advice", t)
+            if self._with_history:
+                kwargs["history"] = self._recent_history()
+            advice = self.ask(table, **kwargs)
         except Exception as e:  # noqa: BLE001 - la boucle ne doit jamais planter
             advice = Advice(False, "", error=f"Erreur inattendue : {e}")
         self._results.put((table, advice))
@@ -109,6 +125,7 @@ class Engine:
             self.tracker.on_result(advice.ok)
             if advice.ok:
                 pretty.advice(advice.text, advice.timing() if advice.seconds else "", advice.model)
+                self._remember(advice.text)
                 self._emit("advice", advice.text)
             else:
                 retry = self.tracker.retry_at is not None

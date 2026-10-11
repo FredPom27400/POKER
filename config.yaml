@@ -9,6 +9,7 @@ claude:
   timeout: 30                # secondes par requête
   max_retries: 2             # retries automatiques du SDK (429, 5xx, réseau)
   refusal_fallback: true     # repli serveur automatique si le modèle refuse
+  history_seconds: 120       # conseils des 2 dernières minutes renvoyés pour suivre la main (0 = désactivé)
   max_image_width: 1600      # la capture est réduite au-delà
 capture:
   monitor: 1                 # 1 = écran principal

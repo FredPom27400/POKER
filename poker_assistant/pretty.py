@@ -90,22 +90,30 @@ def action_hex(action: str) -> str:
     return next((HEX[s] for s in action_color(action) if s in HEX), "white")
 
 
-def parse_advice(text: str) -> tuple[str, str, list[str]]:
-    """Sépare ACTION, RAISON et les remarques (incertitudes, notes…)."""
-    action, reason, notes = "", "", []
+def parse_fields(text: str) -> dict:
+    """Sépare LECTURE, ACTION, RAISON et les remarques (incertitudes, notes…)."""
+    f = {"lecture": "", "action": "", "reason": "", "notes": []}
     for raw in text.splitlines():
         line = raw.strip().lstrip("-•* ").strip()
         if not line:
             continue
-        m = re.match(r"(ACTION|RAISON|REASON|NOTE|REMARQUE|INCERTAIN\w*)\s*:\s*(.*)", line, re.I)
+        m = re.match(r"(LECTURE|ACTION|RAISON|REASON|NOTE|REMARQUE|INCERTAIN\w*)\s*:\s*(.*)", line, re.I)
         key = m.group(1).upper() if m else ""
-        if key == "ACTION" and not action:
-            action = m.group(2).strip()
-        elif key in ("RAISON", "REASON") and not reason:
-            reason = m.group(2).strip()
+        if key == "LECTURE" and not f["lecture"]:
+            f["lecture"] = m.group(2).strip()
+        elif key == "ACTION" and not f["action"]:
+            f["action"] = m.group(2).strip()
+        elif key in ("RAISON", "REASON") and not f["reason"]:
+            f["reason"] = m.group(2).strip()
         else:
-            notes.append(m.group(2).strip() if key and key not in ("ACTION", "RAISON", "REASON") else line)
-    return action, reason, notes
+            f["notes"].append(m.group(2).strip() if key in ("NOTE", "REMARQUE") or key.startswith("INCERTAIN")
+                              else line)
+    return f
+
+
+def parse_advice(text: str) -> tuple[str, str, list[str]]:
+    f = parse_fields(text)
+    return f["action"], f["reason"], f["notes"]
 
 
 # --- messages ---------------------------------------------------------------
@@ -130,8 +138,11 @@ def turn(reason: str, detail: str) -> None:
 
 
 def advice(text: str, timing: str = "", model: str = "") -> None:
-    action, reason, notes = parse_advice(text)
+    f = parse_fields(text)
+    action, reason, notes = f["action"], f["reason"], f["notes"]
     _out()
+    if f["lecture"]:
+        _out(_labelled("LU", f["lecture"].replace("|", "·"), GREY, GREY))
     if action:
         _out(f"  {c('ACTION', GREY)}  " + c(f"▌{action.upper()}", *action_color(action)))
     if reason:

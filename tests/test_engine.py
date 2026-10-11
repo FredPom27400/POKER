@@ -225,3 +225,34 @@ def test_engine_streams_partial_text(tmp_path):
     while not events.empty():
         got.append(events.get())
     assert ("advice", "ACTION : Call") in got
+
+
+def test_history_sent_on_next_call(tmp_path):
+    seen = []
+
+    def ask(img, on_text=None, history=None):
+        seen.append(list(history or []))
+        return Advice(True, "LECTURE : 6♠6♦ | 8♦3♣K♠ | bouton | 1 | 3 BB\nACTION : Call 3 BB\nRAISON : x")
+
+    eng = Engine(make_cfg(), None, ask, DecisionLogger(tmp_path))
+    flop, turn = make_table(True, seed=1, board=3), make_table(True, seed=1, board=4)
+    run_frames(eng, [flop] * 2 + [make_table(False, seed=1, board=3)] * 3 + [turn] * 2)
+    assert len(seen) == 2 and seen[0] == []
+    assert "6♠6♦" in seen[1][0] and "Call 3 BB" in seen[1][0]
+
+
+def test_history_expires(tmp_path):
+    eng = Engine(make_cfg(), None, lambda img, history=None: Advice(True, "x"), DecisionLogger(tmp_path))
+    eng._remember("LECTURE : A♠K♠ | - | UTG | 4 | 1 BB\nACTION : Raise to 2.5 BB")
+    assert len(eng._recent_history()) == 1
+    eng._history = [(t - 1000, h) for t, h in eng._history]
+    assert eng._recent_history() == []
+
+
+def test_prompt_and_parsing():
+    from poker_assistant import claude_client, pretty
+    assert "sens des aiguilles d'une montre" in claude_client.SYSTEM_PROMPT
+    assert claude_client.user_text(None) == claude_client.USER_TEXT
+    assert "même main" in claude_client.user_text(["il y a 10 s : X → Call"])
+    f = pretty.parse_fields("LECTURE : Q♣2♥ | - | SB | 1 | 0,5 BB\nACTION : Call\nRAISON : r\nNOTE : n")
+    assert (f["lecture"], f["action"], f["reason"], f["notes"]) == ("Q♣2♥ | - | SB | 1 | 0,5 BB", "Call", "r", ["n"])
