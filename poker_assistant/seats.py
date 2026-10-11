@@ -39,11 +39,18 @@ class SeatFacts:
     def opponents(self) -> int:
         return len(self.in_hand)
 
+    @property
+    def cards_seen(self) -> bool:
+        """Aucun adversaire en jeu alors que c'est mon tour est impossible : les
+        dos de cartes de ce thème ne sont alors pas reconnus."""
+        return bool(self.in_hand)
+
     def prompt(self) -> str:
-        where = ", ".join(self.in_hand) if self.in_hand else "aucun"
-        return (f"Faits mesurés automatiquement sur l'image (fiables, prioritaires sur ta propre lecture) : "
-                f"ma position = {self.position} ; bouton : {self.button} ; "
-                f"adversaires encore en jeu = {self.opponents} ({where}).")
+        text = (f"Faits mesurés automatiquement sur l'image (fiables, prioritaires sur ta propre lecture) : "
+                f"ma position = {self.position} ; bouton : {self.button}")
+        if self.cards_seen:
+            text += f" ; adversaires encore en jeu = {self.opponents} ({', '.join(self.in_hand)})"
+        return text + "."
 
 
 def zone_name(angle_deg: float) -> str:
@@ -173,6 +180,8 @@ class SeatReader:
         cx, cy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
         angles = [math.degrees(math.atan2(p[1] - cy, p[0] - cx)) for p in players]
         hero = max(range(len(players)), key=lambda i: players[i][1])
+        if players[hero][1] < 0.6 * h or abs(players[hero][0] - w / 2) > 0.2 * w:
+            return None   # mon siège (en bas au centre) n'a pas été repéré
         order = sorted(range(len(players)), key=lambda i: (angles[i] - angles[hero]) % 360)  # sens horaire
 
         # mise à l'échelle des modèles selon la taille du texte des tapis (fenêtre agrandie/réduite)

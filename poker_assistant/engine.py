@@ -43,7 +43,7 @@ class Engine:
         self.debouncer = Debouncer(cfg["detection"]["stable_frames"])
         self.visibility = TableVisibility(cfg["detection"].get("table_ref"),
                                           cfg["detection"].get("min_table_similarity", 0.0))
-        self._hidden = False
+        self._hidden = 0                    # captures consécutives « table masquée »
         self.seats = SeatReader(cfg["seats"]) if cfg.get("seats", {}).get("enabled") else None
         self.tracker = TurnTracker(cfg["dedupe"])
         self.paused = threading.Event()
@@ -82,8 +82,9 @@ class Engine:
         d = self.detector.detect(table)
         if d.is_turn and not self.visibility.visible(table):
             # Barre d'actions visible mais table cachée : analyser serait inutile.
-            if not self._hidden:
-                self._hidden = True
+            # Avertir seulement si ça dure (une animation peut tromper une capture).
+            self._hidden += 1
+            if self._hidden == 3:
                 saved = ""
                 if self.logger is not None:
                     saved = f" Capture : {self.logger.save_image(table, 'masquee')}"
@@ -91,7 +92,9 @@ class Engine:
                             f"jusqu'à ce qu'elle soit de nouveau visible. [{self.visibility.last}]{saved}")
                 self._emit("error", "Table masquée : remets-la au premier plan")
             return
-        self._hidden = False
+        if self._hidden >= 3:
+            self._emit("waiting", "En attente de ton tour…")
+        self._hidden = 0
         is_turn = self.debouncer.update(d.is_turn)
         if not d.is_turn and self.cfg["detection"]["fast_turn_end"]:
             # La barre peut ne disparaître qu'un instant si les adversaires ont
@@ -103,7 +106,8 @@ class Engine:
             facts = self.seats.read(table) if self.seats is not None and self.seats.ready else None
             detail = describe(d)
             if facts is not None:
-                detail += f" · lu sans IA : {facts.position}, {facts.opponents} adv., bouton {facts.button}"
+                adv = f"{facts.opponents} adv." if facts.cards_seen else "cartes adverses non reconnues"
+                detail += f" · lu sans IA : {facts.position}, {adv}, bouton {facts.button}"
             pretty.turn(self.tracker.reason, detail)
             self._emit("thinking", "Analyse en cours…")
             if self.ask is None:

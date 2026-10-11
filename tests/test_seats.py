@@ -100,3 +100,9 @@ def test_other_theme_still_visible(tmp_path):
     assert vis.similarity(other) < 0.6 and vis.visible(other)
     covered = np.full((H, W, 3), (235, 235, 235), np.uint8)    # fenêtre claire devant
     assert not vis.visible(covered)
+
+
+def test_no_cards_recognised_not_sent_as_fact():
+    from poker_assistant.seats import SeatFacts
+    f = SeatFacts("BTN", "moi", [], 0.9, [0.3, 0.4])
+    assert not f.cards_seen and "adversaires" not in f.prompt() and "BTN" in f.prompt()

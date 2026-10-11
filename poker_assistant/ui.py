@@ -93,6 +93,8 @@ class AdviceWindow:
                     self._show_advice(msg)
                 elif kind == "error":
                     self._message(msg, RED)
+                elif kind == "waiting":
+                    self._message(msg, GREY)
                 elif kind == "thinking":
                     self._message(msg, YELLOW)
                 elif kind == "paused":
