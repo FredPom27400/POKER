@@ -52,6 +52,24 @@ def test_template_hybrid(tmp_path):
     assert not off.is_turn and off.wait_score > off.turn_score
 
 
+def test_two_buttons_other_layout(tmp_path):
+    """FOLD + CALL seuls (face à un tapis) : la barre ne ressemble pas au template
+    « tour » calibré avec 3 boutons, mais c'est bien mon tour."""
+    cv2.imwrite(str(tmp_path / "t.png"), crop_bar(make_table(True), BAR))
+    cv2.imwrite(str(tmp_path / "w.png"), crop_bar(make_table(False), BAR))
+    det = TurnDetector(dict(DET, template_turn=str(tmp_path / "t.png"),
+                            template_wait=str(tmp_path / "w.png")), BAR)
+    table = make_table(False)
+    x0, y0 = int(BAR["x"] * table.shape[1]), int(BAR["y"] * table.shape[0])
+    bw, bh = int(BAR["width"] * table.shape[1]), int(BAR["height"] * table.shape[0])
+    table[y0:y0 + bh, x0:x0 + bw] = (45, 40, 38)
+    for i in range(2):   # deux boutons sur la moitié droite de la barre
+        x = x0 + bw // 2 + i * bw // 4 + 4
+        table[y0 + bh // 2:y0 + bh - 4, x:x + bw // 4 - 8] = (35, 35, 200)
+    d = det.detect(table)
+    assert d.buttons == 2 and d.is_turn
+
+
 def test_template_vetoes_red_bar_not_matching(tmp_path):
     # Barre entièrement rouge (ex. bannière) : la couleur dit oui, le template dit non.
     table = make_table(False)

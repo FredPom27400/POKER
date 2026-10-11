@@ -19,6 +19,7 @@ Comment lire la table sur ce client (ces règles sont fiables : applique-les san
 - Les jetons accompagnés d'un montant « X BB » devant un joueur sont sa mise dans le tour d'enchères en cours.
 - « Pot total » = pot + toutes les mises en cours (le mien compris) ; « Pot » seul (après le flop) ne les inclut pas.
 - Le montant à payer est écrit sur mon bouton « CALL X BB » ; « CHECK » = rien à payer ; « BET » / « RAISE TO » = montant minimal.
+- S'il n'y a que deux boutons (FOLD et CALL, souvent face à un tapis), relancer est impossible : choisis entre Fold et Call.
 
 Positions, méthode obligatoire :
 1. Le jeton « D » est posé sur le tapis juste devant son propriétaire, entre sa plaque et le centre de la table. S'il est juste au-dessus de mes cartes, c'est moi le bouton.

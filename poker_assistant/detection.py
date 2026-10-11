@@ -148,13 +148,17 @@ class TurnDetector:
 
         ts = template_score(bar, self.turn_tpl) if self.turn_tpl is not None else None
         ws = template_score(bar, self.wait_tpl) if self.wait_tpl is not None else None
+        method = self.cfg.get("method", "hybrid")
         tpl_ok: bool | None = None
         if ts is not None:
             tpl_ok = ts >= self.cfg["template_min_score"] and (ws is None or ts > ws)
+            if not tpl_ok and ws is not None and method != "template":
+                # Autre disposition que la barre calibrée (ex. FOLD + CALL seuls, face
+                # à un tapis) : il suffit que la barre ne ressemble pas à l'attente.
+                tpl_ok = ws < self.cfg["template_min_score"]
         elif ws is not None:
             tpl_ok = ws < self.cfg["template_min_score"]
 
-        method = self.cfg.get("method", "hybrid")
         if method == "color" or tpl_ok is None:
             is_turn = color_ok
         elif method == "template":
