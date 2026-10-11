@@ -32,7 +32,7 @@ detection:
   stable_frames: 2
   fast_turn_end: true
   table_ref: templates/table_ref.png
-  min_table_similarity: 0.6    # table masquée (fenêtre par-dessus) en dessous : pas d'appel
+  min_table_similarity: 0.6    # table masquée (fenêtre par-dessus) en dessous : pas d'appel ; 0 = vérification désactivée
 dedupe:
   change_ratio: 0.002
   pixel_delta: 25

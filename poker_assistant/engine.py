@@ -84,8 +84,11 @@ class Engine:
             # Barre d'actions visible mais table cachée : analyser serait inutile.
             if not self._hidden:
                 self._hidden = True
+                saved = ""
+                if self.logger is not None:
+                    saved = f" Capture : {self.logger.save_image(table, 'masquee')}"
                 pretty.warn("Table masquée (une fenêtre est devant ?) : analyse suspendue "
-                            "jusqu'à ce qu'elle soit de nouveau visible.")
+                            f"jusqu'à ce qu'elle soit de nouveau visible. [{self.visibility.last}]{saved}")
                 self._emit("error", "Table masquée : remets-la au premier plan")
             return
         self._hidden = False

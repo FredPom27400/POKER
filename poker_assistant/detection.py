@@ -227,6 +227,7 @@ class TableVisibility:
 
     def __init__(self, ref_path: str | None, min_similarity: float):
         self.min_similarity = min_similarity
+        self.last = ""
         img = cv2.imread(str(resolve(ref_path))) if ref_path and Path(resolve(ref_path)).exists() else None
         self.ref = _hs_hist(img) if img is not None else None
 
@@ -237,7 +238,10 @@ class TableVisibility:
 
     def visible(self, table: np.ndarray) -> bool:
         sim = self.similarity(table)
+        self.last = f"couleurs {sim:.2f}" if sim is not None else ""
         if sim is None or sim >= self.min_similarity:
             return True
         from .seats import find_players
-        return len(find_players(table)) >= 2
+        n = len(find_players(table))
+        self.last += f" (seuil {self.min_similarity}), {n} joueur(s) repéré(s)"
+        return n >= 2

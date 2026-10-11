@@ -13,6 +13,15 @@ class DecisionLogger:
     def __init__(self, directory: Path):
         self.dir = Path(directory)
 
+    def save_image(self, table: np.ndarray, prefix: str) -> Path:
+        """Capture seule (diagnostic), ex. logs/AAAA-MM-JJ/masquee_HHMMSS.png."""
+        now = datetime.now()
+        day = self.dir / now.strftime("%Y-%m-%d")
+        day.mkdir(parents=True, exist_ok=True)
+        img = day / f"{prefix}_{now.strftime('%H%M%S')}.png"
+        cv2.imwrite(str(img), table)
+        return img
+
     def log(self, table: np.ndarray, advice_text: str, ok: bool, model: str = "", error: str = "") -> Path:
         now = datetime.now()
         day = self.dir / now.strftime("%Y-%m-%d")
