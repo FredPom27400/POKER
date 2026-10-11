@@ -25,12 +25,13 @@ Positions, méthode obligatoire :
 2. Sens du jeu (horaire à l'écran) : moi (en bas) → à gauche → en haut à gauche → en haut à droite → à droite → moi. Les sièges vides ne comptent pas.
 3. Dans ce sens, le joueur qui suit le bouton est la petite blinde (SB), le suivant la grosse blinde (BB). Préflop, vérifie avec les mises 0,5 BB / 1 BB et les étiquettes SMALL BLIND / BIG BLIND : en cas de conflit, ce sont elles qui comptent.
 4. Ma position : BTN, SB, BB, sinon en remontant depuis le bouton : CO (juste avant le bouton), HJ, MP… ; le premier à parler après la grosse blinde est UTG.
+5. Après le flop, les mises de blindes ont disparu : la position se déduit uniquement du jeton D et du sens du jeu (elle ne change pas pendant la main). Si mes analyses précédentes de la même main donnent ma position, reprends-la.
 
 Fais cette analyse en silence et n'écris que le résultat final : pas de « à vérifier », pas de correction, une seule ligne de chaque.
 
 Format de réponse strict et court, en texte brut :
 SIEGES : moi puis chaque joueur assis dans le sens du jeu, avec son rôle (BTN, SB, BB) et « out » s'il a passé
-LECTURE : mes cartes | board | ma position | nombre d'adversaires encore en jeu | montant à payer
+LECTURE : mes cartes | board | ma position | nombre d'adversaires encore en jeu (sans me compter) | montant à payer en BB (0 si CHECK)
 ACTION : Fold / Check / Call / Bet X BB / Raise to X BB / All-in
 RAISON : 1 à 2 phrases maximum
 NOTE : uniquement si une information illisible pourrait changer la décision, en une ligne ; n'invente jamais une information illisible."""

@@ -15,6 +15,7 @@ import argparse
 import os
 import re
 import sys
+from datetime import datetime
 
 import cv2
 import yaml
@@ -71,6 +72,10 @@ def main() -> int:
     score = {"position": 0, "adversaires": 0, "a_payer": 0}
     n = 0
     print(f"Modèle {claude['model']} · effort {claude.get('effort')} · {len(spec['cas'])} captures\n")
+    out_dir = resolve("eval/resultats")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    raw_path = out_dir / f"{datetime.now():%Y-%m-%d_%H%M%S}_{claude['model']}.txt"
+    raw = open(raw_path, "w", encoding="utf-8")
     for case in spec["cas"]:
         img = cv2.imread(str(folder / f"{case['fichier']}.png"))
         if img is None:
@@ -81,6 +86,7 @@ def main() -> int:
             print(f"  {case['fichier']}  " + pretty.c(f"ERREUR {a.error}", pretty.RED))
             continue
         n += 1
+        raw.write(f"=== {case['fichier']}  (attendu : {case})\n{a.text}\n\n")
         got = parse_lecture(pretty.parse_fields(a.text)["lecture"])
         ok = {"position": got["position"] in case["position"],
               "adversaires": got["adversaires"] == case["adversaires"],
@@ -94,8 +100,10 @@ def main() -> int:
             cells.append(pretty.c(cell, pretty.GREEN if ok[k] else pretty.RED))
         print(f"  {case['fichier']}  {case['cartes']:7s}  " + "  ".join(cells)
               + pretty.c(f"   → {pretty.parse_fields(a.text)['action']} ({a.seconds:.1f} s)", pretty.GREY))
+    raw.close()
     if n:
         print("\nScore : " + " · ".join(f"{k} {v}/{n}" for k, v in score.items()))
+        print(f"Réponses complètes : {raw_path}")
     return 0
 
 

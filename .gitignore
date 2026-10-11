@@ -4,3 +4,4 @@ __pycache__/
 logs/
 samples/_debug/
 .pytest_cache/
+eval/resultats/
