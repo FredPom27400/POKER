@@ -30,6 +30,8 @@ detection:
   template_min_score: 0.35
   stable_frames: 2
   fast_turn_end: true
+  table_ref: templates/table_ref.png
+  min_table_similarity: 0.6    # table masquée (fenêtre par-dessus) en dessous : pas d'appel
 dedupe:
   change_ratio: 0.002
   pixel_delta: 25

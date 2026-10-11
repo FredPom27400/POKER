@@ -1,0 +1,21 @@
+# Vérité terrain annotée à la main à partir de captures réelles (logs/2026-10-11).
+# position : positions acceptées ; adversaires : nombre encore en jeu ; a_payer : en BB.
+# Les images restent sur ta machine : seules ces annotations sont dans le dépôt.
+dossier: logs/2026-10-11
+cas:
+  - {fichier: "134418_724", cartes: "A♦ 2♥", position: [BTN], adversaires: 3, a_payer: 3.5}
+  - {fichier: "134445_050", cartes: "J♣ T♦", position: [CO], adversaires: 3, a_payer: 1}
+  - {fichier: "134508_422", cartes: "J♣ T♦", position: [CO], adversaires: 2, a_payer: 5}
+  - {fichier: "134524_102", cartes: "Q♣ 5♠", position: [UTG, HJ], adversaires: 4, a_payer: 1}
+  - {fichier: "134615_422", cartes: "Q♣ 3♣", position: [BB], adversaires: 2, a_payer: 10.5}
+  - {fichier: "134651_435", cartes: "7♣ 6♥", position: [SB], adversaires: 3, a_payer: 3}
+  - {fichier: "134727_903", cartes: "J♦ 7♥", position: [BTN], adversaires: 2, a_payer: 1}
+  - {fichier: "134803_448", cartes: "5♣ 2♦", position: [CO], adversaires: 3, a_payer: 1}
+  - {fichier: "134852_184", cartes: "J♠ 9♠", position: [UTG, HJ], adversaires: 4, a_payer: 1}
+  - {fichier: "134936_089", cartes: "A♣ 8♣", position: [BB], adversaires: 1, a_payer: 2.5}
+  - {fichier: "134942_707", cartes: "A♣ 8♣", position: [BB], adversaires: 1, a_payer: 0}
+  - {fichier: "135006_109", cartes: "A♣ 8♣", position: [BB], adversaires: 1, a_payer: 5.5}
+  - {fichier: "135021_860", cartes: "J♣ 7♠", position: [SB], adversaires: 2, a_payer: 2.5}
+  - {fichier: "135058_649", cartes: "6♦ 3♦", position: [BTN], adversaires: 3, a_payer: 1}
+  - {fichier: "135116_430", cartes: "6♦ 3♦", position: [BTN], adversaires: 3, a_payer: 4}
+  - {fichier: "135155_448", cartes: "A♠ 6♠", position: [CO], adversaires: 3, a_payer: 1}

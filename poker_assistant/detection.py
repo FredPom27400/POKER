@@ -200,3 +200,34 @@ def annotate(table: np.ndarray, bar_cfg: dict, d: Detection) -> np.ndarray:
     cv2.putText(out, d.summary(), (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 4)
     cv2.putText(out, d.summary(), (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 1)
     return out
+
+
+def _hs_hist(bgr: np.ndarray) -> np.ndarray:
+    hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+    h = cv2.calcHist([hsv], [0, 1], None, [30, 32], [0, 180, 0, 256])
+    cv2.normalize(h, h)
+    return h
+
+
+class TableVisibility:
+    """Repère une table masquée (fenêtre par-dessus, table fermée…).
+
+    Compare l'histogramme de couleurs de la capture à celui de la table de
+    référence enregistrée par calibrate.py. Cartes, jetons et joueurs changent
+    peu les couleurs d'ensemble (similarité ~0,97-1), alors qu'une fenêtre
+    devant la table la fait chuter (~0,3).
+    """
+
+    def __init__(self, ref_path: str | None, min_similarity: float):
+        self.min_similarity = min_similarity
+        img = cv2.imread(str(resolve(ref_path))) if ref_path and Path(resolve(ref_path)).exists() else None
+        self.ref = _hs_hist(img) if img is not None else None
+
+    def similarity(self, table: np.ndarray) -> float | None:
+        if self.ref is None:
+            return None
+        return float(cv2.compareHist(self.ref, _hs_hist(table), cv2.HISTCMP_CORREL))
+
+    def visible(self, table: np.ndarray) -> bool:
+        sim = self.similarity(table)
+        return sim is None or sim >= self.min_similarity

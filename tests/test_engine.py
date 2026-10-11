@@ -251,8 +251,36 @@ def test_history_expires(tmp_path):
 
 def test_prompt_and_parsing():
     from poker_assistant import claude_client, pretty
-    assert "sens des aiguilles d'une montre" in claude_client.SYSTEM_PROMPT
+    assert "Sens du jeu" in claude_client.SYSTEM_PROMPT and "SIEGES" in claude_client.SYSTEM_PROMPT
     assert claude_client.user_text(None) == claude_client.USER_TEXT
     assert "même main" in claude_client.user_text(["il y a 10 s : X → Call"])
     f = pretty.parse_fields("LECTURE : Q♣2♥ | - | SB | 1 | 0,5 BB\nACTION : Call\nRAISON : r\nNOTE : n")
     assert (f["lecture"], f["action"], f["reason"], f["notes"]) == ("Q♣2♥ | - | SB | 1 | 0,5 BB", "Call", "r", ["n"])
+
+
+def test_hidden_table_skips_call(tmp_path):
+    import cv2
+    ref = tmp_path / "ref.png"
+    cv2.imwrite(str(ref), make_table(True, seed=1))
+    cfg = make_cfg()
+    cfg["detection"].update(table_ref=str(ref), min_table_similarity=0.6)
+    calls = []
+    eng = Engine(cfg, None, lambda img: calls.append(1) or Advice(True, "ok"), DecisionLogger(tmp_path))
+    hidden = make_table(True, seed=1)
+    hidden[: int(hidden.shape[0] * 0.85)] = (235, 235, 235)   # fenêtre claire devant la table
+    visible = make_table(True, seed=1)
+    calls_img = []
+    eng.ask = lambda img: calls_img.append(img) or Advice(True, "ok")
+    run_frames(eng, [hidden] * 4 + [visible] * 3)              # puis table de nouveau visible
+    assert len(calls_img) == 1 and (calls_img[0] == visible).all()
+
+
+def test_eval_parsing_and_cases():
+    import yaml
+    from eval_lecture import parse_lecture
+    assert parse_lecture("7♥ J♦ | - | BTN | 2 | 1 BB") == {"position": "BTN", "adversaires": 2, "a_payer": 1}
+    assert parse_lecture("x | - | BB (bouton chez X) | 1 adversaire | 0 (CHECK)")["position"] == "BB"
+    assert parse_lecture("x | - | Cutoff (le bouton est à gauche) | 3 | 1 BB")["position"] == "CO"
+    assert parse_lecture("x | - | petite blinde | 3 | 10,5 BB")["a_payer"] == 10.5
+    spec = yaml.safe_load(open(Path(__file__).resolve().parent.parent / "eval" / "cases.yaml", encoding="utf-8"))
+    assert all(isinstance(c["fichier"], str) and "_" in c["fichier"] for c in spec["cas"])

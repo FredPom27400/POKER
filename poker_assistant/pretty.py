@@ -63,7 +63,7 @@ def _labelled(label: str, text: str, label_color: str, text_color: str = "") -> 
     """« LABEL  texte » avec retour à la ligne aligné sous le texte."""
     lines = textwrap.wrap(text, width=_width() - 10) or [""]
     body = [c(l, text_color) if text_color else l for l in lines]
-    first = f"  {c(label.ljust(6), label_color)}  {body[0]}"
+    first = f"  {c(label.ljust(6)[:6], label_color)}  {body[0]}"
     return "\n".join([first] + [" " * 10 + l for l in body[1:]])
 
 
@@ -92,14 +92,16 @@ def action_hex(action: str) -> str:
 
 def parse_fields(text: str) -> dict:
     """Sépare LECTURE, ACTION, RAISON et les remarques (incertitudes, notes…)."""
-    f = {"lecture": "", "action": "", "reason": "", "notes": []}
+    f = {"sieges": "", "lecture": "", "action": "", "reason": "", "notes": []}
     for raw in text.splitlines():
         line = raw.strip().lstrip("-•* ").strip()
         if not line:
             continue
-        m = re.match(r"(LECTURE|ACTION|RAISON|REASON|NOTE|REMARQUE|INCERTAIN\w*)\s*:\s*(.*)", line, re.I)
+        m = re.match(r"(SI[EÈ]GES|LECTURE|ACTION|RAISON|REASON|NOTE|REMARQUE|INCERTAIN\w*)\s*:\s*(.*)", line, re.I)
         key = m.group(1).upper() if m else ""
-        if key == "LECTURE" and not f["lecture"]:
+        if key in ("SIEGES", "SIÈGES") and not f["sieges"]:
+            f["sieges"] = m.group(2).strip()
+        elif key == "LECTURE" and not f["lecture"]:
             f["lecture"] = m.group(2).strip()
         elif key == "ACTION" and not f["action"]:
             f["action"] = m.group(2).strip()
@@ -141,6 +143,8 @@ def advice(text: str, timing: str = "", model: str = "") -> None:
     f = parse_fields(text)
     action, reason, notes = f["action"], f["reason"], f["notes"]
     _out()
+    if f["sieges"]:
+        _out(_labelled("TABLE", f["sieges"], GREY, GREY))
     if f["lecture"]:
         _out(_labelled("LU", f["lecture"].replace("|", "·"), GREY, GREY))
     if action:

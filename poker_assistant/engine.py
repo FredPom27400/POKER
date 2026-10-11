@@ -12,7 +12,7 @@ import numpy as np
 
 from . import pretty
 from .claude_client import Advice
-from .detection import Debouncer, TurnDetector
+from .detection import Debouncer, TableVisibility, TurnDetector
 from .journal import DecisionLogger
 from .state import TurnTracker, signature
 
@@ -40,6 +40,9 @@ class Engine:
         self.events = events
         self.detector = TurnDetector(cfg["detection"], cfg["action_bar"])
         self.debouncer = Debouncer(cfg["detection"]["stable_frames"])
+        self.visibility = TableVisibility(cfg["detection"].get("table_ref"),
+                                          cfg["detection"].get("min_table_similarity", 0.0))
+        self._hidden = False
         self.tracker = TurnTracker(cfg["dedupe"])
         self.paused = threading.Event()
         self.stopped = threading.Event()
@@ -74,6 +77,15 @@ class Engine:
         self._drain_results()
         table = self.grab()
         d = self.detector.detect(table)
+        if d.is_turn and not self.visibility.visible(table):
+            # Barre d'actions visible mais table cachée : analyser serait inutile.
+            if not self._hidden:
+                self._hidden = True
+                pretty.warn("Table masquée (une fenêtre est devant ?) : analyse suspendue "
+                            "jusqu'à ce qu'elle soit de nouveau visible.")
+                self._emit("error", "Table masquée : remets-la au premier plan")
+            return
+        self._hidden = False
         is_turn = self.debouncer.update(d.is_turn)
         if not d.is_turn and self.cfg["detection"]["fast_turn_end"]:
             # La barre peut ne disparaître qu'un instant si les adversaires ont

@@ -43,7 +43,9 @@ DEFAULTS: dict[str, Any] = {
         "template_wait": "templates/wait_bar.png",
         "template_min_score": 0.35,
         "stable_frames": 2,         # frames consécutives pour valider un changement
-        "fast_turn_end": True,      # une seule frame sans boutons suffit à finir le tour
+        "fast_turn_end": True,
+        "table_ref": "templates/table_ref.png",   # table de référence (calibrate.py)
+        "min_table_similarity": 0.6,  # en dessous : table masquée, pas d'appel API      # une seule frame sans boutons suffit à finir le tour
     },
     "dedupe": {
         "change_ratio": 0.002,      # part de pixels changés = nouvelle situation

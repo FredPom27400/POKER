@@ -96,6 +96,22 @@ chaque appel.
 par le SDK (`claude.max_retries`), puis par l'outil jusqu'à `dedupe.max_retries_per_turn` fois,
 tant que c'est encore ton tour. La boucle continue quoi qu'il arrive.
 
+## Mesurer la qualité de lecture
+
+`eval/cases.yaml` liste des captures réelles (dans `logs/`) avec la bonne lecture notée à la main :
+position, nombre d'adversaires encore en jeu, montant à payer.
+
+```bash
+python eval_lecture.py                     # ou double-clic sur tester_lecture.bat
+python eval_lecture.py --model claude-opus-5-5 --effort medium
+```
+Affiche, capture par capture, ce que Claude a lu (vert = juste, rouge = faux) et un score par
+critère. À relancer après chaque changement de prompt ou de modèle. Coût : un appel par capture.
+
+Une table masquée par une autre fenêtre est repérée localement (comparaison des couleurs avec
+`templates/table_ref.png`, enregistrée à la calibration) : aucun appel n'est fait tant qu'elle
+n'est pas de nouveau visible.
+
 ## Choisir le modèle le plus rapide
 
 ```bash

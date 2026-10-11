@@ -100,6 +100,9 @@ def main() -> None:
     ratio, boxes = red_buttons(bar, cfg["detection"])
     print(f"Barre : {bar.shape[1]}x{bar.shape[0]} px, pixels rouges {ratio:.1%}, boutons rouges {len(boxes)}")
 
+    ref = resolve(cfg["detection"]["table_ref"])
+    ref.parent.mkdir(parents=True, exist_ok=True)
+    cv2.imwrite(str(ref), table)   # sert à repérer une table masquée par une autre fenêtre
     label = args.label if args.label != "ask" else ask_label(ratio, len(boxes), cfg)
     path = save_template(cfg, bar, label)
     print(f"Template '{label}' enregistré : {path}")
