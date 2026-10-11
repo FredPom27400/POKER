@@ -74,6 +74,7 @@ DEFAULTS: dict[str, Any] = {
         "hotkey": "<ctrl>+<alt>+p",
         "geometry": "+20+20",
         "font_size": 12,
+        "width": 440,               # largeur de la fenêtre (px)
         "opacity": 0.93,
     },
     "logging": {"dir": "logs"},

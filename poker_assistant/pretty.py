@@ -113,6 +113,20 @@ def parse_fields(text: str) -> dict:
     return f
 
 
+def lecture_summary(lecture: str) -> str:
+    """« K♦ 9♠ | préflop, pas de board | BTN | 1 adversaire (X) | 7,5 BB »
+    -> « K♦ 9♠  ·  préflop  ·  BTN  ·  1 adversaire (X)  ·  à payer 7,5 BB »."""
+    parts = [p.strip() for p in lecture.split("|")]
+    if len(parts) >= 2 and re.search(r"pas de board|préflop|preflop|^-$|^aucun", parts[1], re.I):
+        parts[1] = "préflop"
+    if len(parts) >= 4 and re.fullmatch(r"\d+", parts[3]):
+        parts[3] = f"{parts[3]} adv."
+    if len(parts) >= 5:
+        pay = parts[4]
+        parts[4] = "rien à payer" if re.fullmatch(r"0(\s*BB)?|0 \(.*\)", pay) else f"à payer {pay}"
+    return "  ·  ".join(p for p in parts if p)
+
+
 def parse_advice(text: str) -> tuple[str, str, list[str]]:
     f = parse_fields(text)
     return f["action"], f["reason"], f["notes"]

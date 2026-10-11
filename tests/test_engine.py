@@ -284,3 +284,10 @@ def test_eval_parsing_and_cases():
     assert parse_lecture("x | - | petite blinde | 3 | 10,5 BB")["a_payer"] == 10.5
     spec = yaml.safe_load(open(Path(__file__).resolve().parent.parent / "eval" / "cases.yaml", encoding="utf-8"))
     assert all(isinstance(c["fichier"], str) and "_" in c["fichier"] for c in spec["cas"])
+
+
+def test_lecture_summary():
+    from poker_assistant.pretty import lecture_summary
+    assert lecture_summary("K♦ 9♠ | préflop, pas de board | BTN | 1 adversaire (X) | 7,5 BB") == \
+        "K♦ 9♠  ·  préflop  ·  BTN  ·  1 adversaire (X)  ·  à payer 7,5 BB"
+    assert lecture_summary("A♣ 8♣ | J♦ Q♦ 4♦ | BB | 1 | 0") == "A♣ 8♣  ·  J♦ Q♦ 4♦  ·  BB  ·  1 adv.  ·  rien à payer"

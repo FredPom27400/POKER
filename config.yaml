@@ -55,6 +55,7 @@ ui:
   hotkey: <ctrl>+<alt>+p
   geometry: +20+20
   font_size: 12
+  width: 440
   opacity: 0.93
 logging:
   dir: logs
