@@ -34,7 +34,7 @@ Fais cette analyse en silence et n'écris que le résultat final : pas de « à 
 Format de réponse strict et court, en texte brut :
 SIEGES : moi puis chaque joueur assis dans le sens du jeu, avec son rôle (BTN, SB, BB) et « out » s'il a passé
 LECTURE : mes cartes | board | ma position | nombre d'adversaires encore en jeu (sans me compter) | montant à payer en BB (0 si CHECK)
-ACTION : Fold / Check / Call / Bet X BB / Raise to X BB / All-in
+ACTION : une seule action parmi Fold / Check / Call / Bet X BB / Raise to X BB / All-in, sans reformulation
 RAISON : 1 à 2 phrases maximum
 NOTE : uniquement si une information illisible pourrait changer la décision, en une ligne ; n'invente jamais une information illisible."""
 
@@ -42,13 +42,11 @@ USER_TEXT = "C'est mon tour. Quelle est la meilleure action ? Réponds en texte 
 
 
 def user_text(history: list[str] | None, facts: str | None = None) -> str:
-    parts = []
+    parts = [facts] if facts else []
     if history:
         lines = "\n".join(f"- {h}" for h in history)
         parts.append(f"Mes analyses précédentes des dernières minutes, de la plus ancienne à la plus récente "
                      f"(c'est la même main si mes cartes sont identiques ; sinon, ignore-les) :\n{lines}")
-    if facts:
-        parts.append(facts)
     parts.append(USER_TEXT)
     return "\n\n".join(parts)
 

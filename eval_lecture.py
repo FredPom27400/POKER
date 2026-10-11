@@ -93,7 +93,8 @@ def main() -> int:
             print(f"  {case['fichier']}  " + pretty.c(f"ERREUR {a.error}", pretty.RED))
             continue
         n += 1
-        raw.write(f"=== {case['fichier']}  (attendu : {case})\n{a.text}\n\n")
+        local = f"{facts.position}, {facts.opponents} adv." if facts else "rien détecté"
+        raw.write(f"=== {case['fichier']}  (attendu : {case})\nLu sans IA : {local}\n{a.text}\n\n")
         got = parse_lecture(pretty.parse_fields(a.text)["lecture"])
         ok = {"position": got["position"] in case["position"],
               "adversaires": got["adversaires"] == case["adversaires"],
@@ -105,6 +106,11 @@ def main() -> int:
             want = "/".join(case[k]) if k == "position" else case[k]
             cell = f"{label} {got[k]}" + ("" if ok[k] else f" (attendu {want})")
             cells.append(pretty.c(cell, pretty.GREEN if ok[k] else pretty.RED))
+        if seats:
+            local_ok = facts is not None and facts.position in case["position"] \
+                and facts.opponents == case["adversaires"]
+            cells.append(pretty.c("[sans IA " + (f"{facts.position}/{facts.opponents}" if facts else "—") + "]",
+                                  pretty.GREEN if local_ok else pretty.RED))
         print(f"  {case['fichier']}  {case['cartes']:7s}  " + "  ".join(cells)
               + pretty.c(f"   → {pretty.parse_fields(a.text)['action']} ({a.seconds:.1f} s)", pretty.GREY))
     raw.close()
