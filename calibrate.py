@@ -5,7 +5,7 @@
     python calibrate.py --monitor 2 --delay 5
     python calibrate.py --image capture.png  # depuis une capture plein écran existante
     python calibrate.py --template-only      # garde les régions, refait juste le template
-    python calibrate.py --seats              # garde les régions, calibre sièges / jeton D / cartes
+    python calibrate.py --seats              # ajoute un thème : modèles du jeton D et du dos de carte
 
 Dans chaque fenêtre : trace un rectangle, puis Entrée/Espace (c = annuler).
 Le template sauvegardé dépend de l'état de la barre au moment de la capture :
@@ -41,55 +41,33 @@ def select_roi(title: str, img: np.ndarray) -> tuple[int, int, int, int]:
     return tuple(int(round(v / scale)) for v in (x, y, rw, rh))
 
 
-def click_points(title: str, img: np.ndarray) -> list[tuple[int, int]]:
-    """Clics successifs (Entrée pour valider, Retour arrière pour annuler le dernier)."""
-    h, w = img.shape[:2]
-    scale = min(1.0, MAX_VIEW[0] / w, MAX_VIEW[1] / h)
-    base = cv2.resize(img, (int(w * scale), int(h * scale))) if scale < 1 else img.copy()
-    pts: list[tuple[int, int]] = []
-
-    def on_mouse(event, x, y, *_):
-        if event == cv2.EVENT_LBUTTONDOWN:
-            pts.append((x, y))
-
-    cv2.namedWindow(title)
-    cv2.setMouseCallback(title, on_mouse)
-    print(f"-> {title} (clic sur chaque nom, Entrée pour valider, Retour arrière = annuler)")
-    while True:
-        view = base.copy()
-        for i, (x, y) in enumerate(pts, 1):
-            cv2.circle(view, (x, y), 8, (0, 255, 255), 2)
-            cv2.putText(view, str(i), (x + 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
-        cv2.imshow(title, view)
-        key = cv2.waitKey(30) & 0xFF
-        if key in (13, 10):
-            break
-        if key == 8 and pts:
-            pts.pop()
-        if key == 27:
-            sys.exit("Sélection annulée.")
-    cv2.destroyWindow(title)
-    return [(int(round(x / scale)), int(round(y / scale))) for x, y in pts]
-
-
 def calibrate_seats(cfg: dict, table: np.ndarray) -> None:
-    """Sièges, jeton D et dos de carte : position et adversaires lus sans IA."""
-    h, w = table.shape[:2]
-    pts = click_points("Sieges - clique sur le NOM de chaque joueur, toi compris", table)
-    if len(pts) < 2:
-        sys.exit("Il faut au moins 2 sièges.")
+    """Modèles du jeton D et du dos de carte (un par thème graphique, ils s'ajoutent)."""
+    from poker_assistant.seats import SeatReader, find_players
     seats = cfg["seats"]
-    seats["points"] = [[round(x / w, 4), round(y / h, 4)] for x, y in pts]
-    seats["ref_width"] = w
+    players = find_players(table)
+    print(f"Joueurs assis détectés sur cette capture : {len(players)}")
     x, y, rw, rh = select_roi("Jeton D - entoure le jeton du bouton (juste le rond)", table)
-    _save(seats["dealer_template"], table[y:y + rh, x:x + rw])
-    x, y, rw, rh = select_roi("Carte - entoure le symbole W d'une carte d'adversaire (sans le bord)", table)
-    _save(seats["cardback_template"], table[y:y + rh, x:x + rw])
+    seats["dealer_templates"] = _add(seats.get("dealer_templates"), "dealer", table[y:y + rh, x:x + rw])
+    x, y, rw, rh = select_roi("Carte - entoure le symbole d'une carte cachee d'adversaire (sans le bord)", table)
+    seats["cardback_templates"] = _add(seats.get("cardback_templates"), "cardback", table[y:y + rh, x:x + rw])
+    if players:
+        seats["ref_text_height"] = round(sorted(p[2] for p in players)[len(players) // 2], 1)
     seats["enabled"] = True
-    from poker_assistant.seats import SeatReader
     facts = SeatReader(seats).read(table)
-    print("Lecture des sièges sur cette capture : "
-          + (facts.prompt() if facts else "jeton D introuvable, recommence la sélection"))
+    print("Lecture sur cette capture : "
+          + (facts.prompt() if facts else "impossible (jeton D ou joueurs introuvables), recommence"))
+
+
+def _add(paths: list | None, kind: str, img: np.ndarray) -> list:
+    """Enregistre un nouveau modèle sans écraser ceux des autres thèmes."""
+    paths = list(paths or [])
+    i = 1
+    while f"templates/{kind}_{i}.png" in paths or resolve(f"templates/{kind}_{i}.png").exists():
+        i += 1
+    rel = f"templates/{kind}_{i}.png"
+    _save(rel, img)
+    return paths + [rel]
 
 
 def _save(path: str, img: np.ndarray) -> None:
@@ -130,7 +108,7 @@ def main() -> None:
     ap.add_argument("--template-only", action="store_true", help="réutilise les régions existantes")
     ap.add_argument("--label", choices=["turn", "wait", "ask"], default="ask")
     ap.add_argument("--seats", action="store_true",
-                    help="calibre seulement les sièges, le jeton D et le dos de carte")
+                    help="ajoute les modèles du jeton D et du dos de carte (un par thème de table)")
     args = ap.parse_args()
 
     cfg = load_config(args.config)
@@ -176,7 +154,7 @@ def main() -> None:
         print("Attention : peu de rouge détecté alors que c'est ton tour. "
               "Vérifie la sélection de la barre ou baisse detection.red_ratio_min.")
 
-    if not args.template_only and input("Calibrer aussi les sièges (position et adversaires lus sans IA) ? [O/n] ").strip().lower() in ("", "o", "oui", "y"):
+    if not args.template_only and input("Enregistrer le jeton D et le dos de carte (position et adversaires lus sans IA) ? [O/n] ").strip().lower() in ("", "o", "oui", "y"):
         calibrate_seats(cfg, table)
 
     save_config(cfg, args.config)

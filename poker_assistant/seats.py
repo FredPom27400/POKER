@@ -1,17 +1,16 @@
-"""Lecture locale (sans IA) du bouton et des joueurs encore en jeu.
+"""Lecture locale (sans IA) des joueurs assis, du bouton et des joueurs en jeu.
 
-Calibré une fois par calibrate.py --seats :
-  * la position de chaque siège (clic sur le nom de chaque joueur, moi compris) ;
-  * un modèle du jeton « D » et un modèle du dos de carte d'un adversaire.
-
-À chaque appel :
-  * le jeton D est cherché sur toute la table (template matching) ; son
-    propriétaire est le siège le plus proche ;
-  * un adversaire est « en jeu » si un dos de carte est trouvé juste au-dessus
-    de son nom ;
-  * l'ordre de jeu est le sens horaire autour du centre de la table, ce qui
-    donne ma position (BTN, SB, BB, UTG, HJ, CO…).
-Ces faits sont transmis à Claude comme informations fiables.
+Aucune calibration par table : fonctionne quel que soit le nombre de sièges
+(3, 5, 6, 8, 9…) et le nombre de joueurs présents.
+  * Joueurs assis : chaque joueur a son tapis écrit en gros chiffres jaunes
+    (« 115 BB ») juste sous son nom en blanc. On cherche ces paires nom/tapis.
+  * Moi : le tapis le plus bas de l'écran.
+  * Bouton : le jeton « D » (modèle enregistré par calibrate.py --seats),
+    attribué au joueur le plus proche.
+  * En jeu : dos de carte (modèle) trouvé au-dessus du nom d'un adversaire.
+  * Ordre de jeu : sens horaire autour du centre des joueurs -> ma position.
+Les modèles (jeton D, dos de carte) dépendent seulement du thème graphique :
+on peut en enregistrer plusieurs (un par thème).
 """
 from __future__ import annotations
 
@@ -68,66 +67,142 @@ def position_name(n: int, btn: int, hero: int) -> str:
     return {1: "CO", 2: "HJ"}.get(before_btn, "MP")
 
 
+def _runs(mask: np.ndarray, w: int, h: int, min_h: float) -> list[tuple[int, int, int, int]]:
+    m = cv2.dilate(mask.astype(np.uint8) * 255, cv2.getStructuringElement(cv2.MORPH_RECT, (max(3, w // 160), 1)))
+    n, _, st, _ = cv2.connectedComponentsWithStats(m)
+    boxes = [tuple(int(v) for v in st[i][:4]) for i in range(1, n) if st[i][3] >= min_h * h]
+    # recolle les morceaux d'une même ligne (« 128 » + « BB »)
+    boxes.sort()
+    merged: list[list[int]] = []
+    for x, y, bw, bh in boxes:
+        for m_ in merged:
+            mx, my, mw, mh = m_
+            same_row = abs((y + bh / 2) - (my + mh / 2)) < 0.4 * max(bh, mh)
+            if same_row and x - (mx + mw) < 0.9 * max(bh, mh):
+                nx, ny = min(mx, x), min(my, y)
+                m_[:] = [nx, ny, max(mx + mw, x + bw) - nx, max(my + mh, y + bh) - ny]
+                break
+        else:
+            merged.append([x, y, bw, bh])
+    return [tuple(b) for b in merged if b[2] > b[3] * 1.2]
+
+
+def find_players(table: np.ndarray) -> list[tuple[float, float, float]]:
+    """(x, y, hauteur du texte) de chaque tapis jaune surmonté d'un nom blanc."""
+    h, w = table.shape[:2]
+    hsv = cv2.cvtColor(table, cv2.COLOR_BGR2HSV)
+    yellow = (hsv[:, :, 0] >= 20) & (hsv[:, :, 0] <= 27) & (hsv[:, :, 1] >= 170) & (hsv[:, :, 2] >= 170)
+    white = (hsv[:, :, 1] < 45) & (hsv[:, :, 2] > 215)
+    players = []
+    for x, y, bw, bh in _runs(yellow, w, h, 0.02):
+        fill = yellow[y:y + bh, x:x + bw].mean()
+        if not 0.15 <= fill <= 0.6:          # un texte remplit ~25-45 % de sa boîte (pas un aplat ni un liseré)
+            continue
+        # le nom occupe la ligne juste au-dessus du tapis, centrée sur lui
+        y0, y1 = int(max(0, y - 1.3 * bh)), int(max(0, y - 0.1 * bh))
+        x0, x1 = int(max(0, x - 0.2 * bw)), int(min(w, x + 1.2 * bw))
+        if y1 - y0 < 3:
+            continue
+        zone = white[y0:y1, x0:x1]
+        cols = zone.any(axis=0)
+        if 0.06 <= zone.mean() <= 0.6 and cols.mean() >= 0.3:
+            players.append((x + bw / 2, y + bh / 2, float(bh)))
+    # un même joueur ne doit apparaître qu'une fois
+    uniq: list[tuple[float, float, float]] = []
+    for p in sorted(players, key=lambda p: -p[2]):
+        if all(abs(p[0] - q[0]) > 2 * q[2] or abs(p[1] - q[1]) > 2 * q[2] for q in uniq):
+            uniq.append(p)
+    return _drop_inner(uniq)
+
+
+def _drop_inner(cands: list[tuple[float, float, float]]) -> list[tuple[float, float, float]]:
+    """Les mises sont posées devant les joueurs, vers le centre : tout candidat
+    situé à l'intérieur du polygone formé par les autres est une mise."""
+    if len(cands) < 4:
+        return cands
+    pts = np.array([[c[0], c[1]] for c in cands], np.float32)
+    hull = cv2.convexHull(pts).reshape(-1, 2)
+    keep = []
+    for c in cands:
+        d = cv2.pointPolygonTest(hull, (float(c[0]), float(c[1])), True)
+        if d < c[2]:                       # sur le bord du polygone (à une hauteur de texte près)
+            keep.append(c)
+    return keep
+
+
+def _best_match(img: np.ndarray, templates: list[np.ndarray]):
+    best = (0.0, (0, 0), None)
+    for t in templates:
+        if t.shape[0] > img.shape[0] or t.shape[1] > img.shape[1]:
+            continue
+        res = cv2.matchTemplate(img, t, cv2.TM_CCOEFF_NORMED)
+        _, score, _, loc = cv2.minMaxLoc(res)
+        if score > best[0]:
+            best = (float(score), loc, t)
+    return best
+
+
 class SeatReader:
     def __init__(self, cfg: dict):
         self.cfg = cfg
-        self.points = [tuple(p) for p in cfg.get("points") or []]
-        self.dealer = self._load(cfg.get("dealer_template"))
-        self.cardback = self._load(cfg.get("cardback_template"))
+        self.dealers = self._load_all(cfg.get("dealer_templates") or [])
+        self.cards = self._load_all(cfg.get("cardback_templates") or [])
 
     @staticmethod
-    def _load(path):
-        if not path or not Path(resolve(path)).exists():
-            return None
-        return cv2.imread(str(resolve(path)))
+    def _load_all(paths) -> list[np.ndarray]:
+        out = []
+        for p in paths:
+            if Path(resolve(p)).exists():
+                img = cv2.imread(str(resolve(p)))
+                if img is not None:
+                    out.append(img)
+        return out
 
     @property
     def ready(self) -> bool:
-        return len(self.points) >= 2 and self.dealer is not None and self.cardback is not None
-
-    def _scaled(self, tpl: np.ndarray, table: np.ndarray) -> np.ndarray:
-        ref_w = self.cfg.get("ref_width") or table.shape[1]
-        s = table.shape[1] / ref_w
-        if abs(s - 1) < 0.02:
-            return tpl
-        return cv2.resize(tpl, None, fx=s, fy=s, interpolation=cv2.INTER_AREA)
+        return bool(self.dealers) and bool(self.cards)
 
     def read(self, table: np.ndarray) -> SeatFacts | None:
         if not self.ready:
             return None
+        players = find_players(table)
+        if len(players) < 2:
+            return None
         h, w = table.shape[:2]
-        pts = [(x * w, y * h) for x, y in self.points]
-        cx, cy = sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts)
-        angles = [math.degrees(math.atan2(y - cy, x - cx)) for x, y in pts]
-        hero = max(range(len(pts)), key=lambda i: pts[i][1])          # siège le plus bas = moi
-        order = sorted(range(len(pts)), key=lambda i: (angles[i] - angles[hero]) % 360)  # sens horaire
+        xs, ys = [p[0] for p in players], [p[1] for p in players]
+        cx, cy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
+        angles = [math.degrees(math.atan2(p[1] - cy, p[0] - cx)) for p in players]
+        hero = max(range(len(players)), key=lambda i: players[i][1])
+        order = sorted(range(len(players)), key=lambda i: (angles[i] - angles[hero]) % 360)  # sens horaire
 
-        dealer = self._scaled(self.dealer, table)
-        res = cv2.matchTemplate(table, dealer, cv2.TM_CCOEFF_NORMED)
-        _, d_score, _, d_loc = cv2.minMaxLoc(res)
+        # mise à l'échelle des modèles selon la taille du texte des tapis (fenêtre agrandie/réduite)
+        ref = self.cfg.get("ref_text_height") or 0
+        med = sorted(p[2] for p in players)[len(players) // 2]
+        scale = med / ref if ref else 1.0
+        dealers, cards = self.dealers, self.cards
+        if abs(scale - 1) > 0.08:
+            rs = lambda t: cv2.resize(t, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)  # noqa: E731
+            dealers, cards = [rs(t) for t in dealers], [rs(t) for t in cards]
+
+        d_score, d_loc, d_tpl = _best_match(table, dealers)
         if d_score < self.cfg.get("dealer_threshold", 0.6):
             return None
-        dx, dy = d_loc[0] + dealer.shape[1] / 2, d_loc[1] + dealer.shape[0] / 2
-        owner = min(range(len(pts)), key=lambda i: (pts[i][0] - dx) ** 2 + (pts[i][1] - dy) ** 2)
+        dx, dy = d_loc[0] + d_tpl.shape[1] / 2, d_loc[1] + d_tpl.shape[0] / 2
+        owner = min(range(len(players)), key=lambda i: (players[i][0] - dx) ** 2 + (players[i][1] - dy) ** 2)
 
-        card = self._scaled(self.cardback, table)
-        th, tw = card.shape[:2]
         in_hand, scores = [], []
         for i in order:
             if i == hero:
                 continue
-            x, y = pts[i]
-            x0, x1 = int(max(0, x - 2 * tw)), int(min(w, x + 2 * tw))
-            y0, y1 = int(max(0, y - 4 * th)), int(min(h, y + 0.5 * th))
-            roi = table[y0:y1, x0:x1]
-            score = 0.0
-            if roi.shape[0] >= th and roi.shape[1] >= tw:
-                score = float(cv2.minMaxLoc(cv2.matchTemplate(roi, card, cv2.TM_CCOEFF_NORMED))[1])
+            x, y, th = players[i]
+            # les cartes sont au-dessus du nom, lui-même au-dessus du tapis
+            x0, x1 = int(max(0, x - 6 * th)), int(min(w, x + 6 * th))
+            y0, y1 = int(max(0, y - 6 * th)), int(max(0, y - 0.5 * th))
+            score = _best_match(table[y0:y1, x0:x1], cards)[0] if y1 > y0 else 0.0
             scores.append(round(score, 2))
-            if score >= self.cfg.get("card_threshold", 0.6):
+            if score >= self.cfg.get("card_threshold", 0.75):
                 in_hand.append(zone_name(angles[i]))
 
-        n = len(order)
-        pos = position_name(n, order.index(owner), order.index(hero))
+        pos = position_name(len(order), order.index(owner), order.index(hero))
         button = "moi" if owner == hero else zone_name(angles[owner])
         return SeatFacts(pos, button, in_hand, round(d_score, 2), scores)

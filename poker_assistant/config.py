@@ -63,10 +63,9 @@ DEFAULTS: dict[str, Any] = {
     # Lecture locale de la position et des adversaires en jeu (calibrate.py --seats).
     "seats": {
         "enabled": False,
-        "points": [],               # nom de chaque joueur (fractions de la table), moi compris
-        "ref_width": 0,             # largeur de la table à la calibration
-        "dealer_template": "templates/dealer.png",
-        "cardback_template": "templates/cardback.png",
+        "dealer_templates": [],     # jeton D, un modèle par thème graphique
+        "cardback_templates": [],   # dos de carte d'adversaire, un par thème
+        "ref_text_height": 0,       # hauteur du texte des tapis à la calibration (mise à l'échelle)
         "dealer_threshold": 0.6,
         "card_threshold": 0.75,
     },

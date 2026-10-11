@@ -33,14 +33,15 @@ enregistrée : `python calibrate.py --image capture.png`.
 ### Lecture des sièges sans IA (recommandé)
 
 À la fin de la calibration (ou plus tard avec `calibrer.bat --seats`), pendant ton tour :
-1. clique sur le **nom de chaque joueur**, toi compris, puis Entrée ;
-2. entoure le **jeton D** (juste le rond) ;
-3. entoure le **symbole W** d'une carte d'un adversaire encore en jeu (sans le bord de la carte).
+1. entoure le **jeton D** (juste le rond) ;
+2. entoure le **symbole d'une carte cachée** d'un adversaire encore en jeu (sans le bord).
 
-Le programme mesure alors lui-même, sur chaque capture, le bouton, ta position et les adversaires
-encore en jeu (cartes « W » présentes), et les donne à Claude comme faits fiables. Sur 34 captures
-réelles annotées : 34/34 pour la position et le nombre d'adversaires. Si le nombre de joueurs assis
-change (siège vide), refais `calibrer.bat --seats`.
+C'est tout : à chaque capture, le programme retrouve lui-même les joueurs assis (tapis jaune sous
+un nom blanc), quel que soit le nombre de sièges (3 à 9) et de joueurs présents, puis le bouton,
+ta position et les adversaires encore en jeu. Ces faits sont donnés à Claude comme fiables.
+Sur 34 captures réelles annotées : 34/34 pour la position et le nombre d'adversaires.
+Pour un autre thème graphique (ex. Expresso Monopoly), relance `calibrer.bat --seats` sur une
+table de ce thème : ses modèles s'ajoutent aux précédents.
 
 ## 2. Vérifier la détection
 

@@ -2,9 +2,6 @@
 # position : positions acceptées ; adversaires : nombre encore en jeu ; a_payer : en BB.
 # Les images restent sur ta machine : seules ces annotations sont dans le dépôt.
 dossier: logs/2026-10-11
-# Sièges de ces captures (cadrage de l'époque, 1621x988) : nom de chaque joueur, moi en premier.
-# Les modèles du jeton D et du dos de carte viennent de ta calibration (calibrer.bat --seats).
-sieges: [[0.5139, 0.7429], [0.1906, 0.5729], [0.3134, 0.1113], [0.7107, 0.1113], [0.8334, 0.5729]]
 cas:
   - {fichier: "134418_724", cartes: "A♦ 2♥", position: [BTN], adversaires: 3, a_payer: 3.5}
   - {fichier: "134445_050", cartes: "J♣ T♦", position: [CO], adversaires: 3, a_payer: 1}
