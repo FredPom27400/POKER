@@ -22,6 +22,7 @@ import yaml
 
 from poker_assistant import pretty
 from poker_assistant.claude_client import ClaudeAdvisor
+from poker_assistant.seats import SeatReader
 from poker_assistant.config import DEFAULT_CONFIG_PATH, load_config, resolve
 
 POSITIONS = [("BTN", r"\bBTN\b|bouton|button"), ("SB", r"\bSB\b|petite blinde|small blind"),
@@ -62,7 +63,11 @@ def main() -> int:
 
     with open(resolve(args.cases), encoding="utf-8") as f:
         spec = yaml.safe_load(f)
-    claude = load_config(args.config)["claude"]
+    cfg = load_config(args.config)
+    claude = cfg["claude"]
+    seats = SeatReader(cfg["seats"]) if cfg["seats"].get("enabled") else None
+    if seats is not None and not seats.ready:
+        seats = None
     if args.model:
         claude["model"] = args.model
     if args.effort:
@@ -71,7 +76,8 @@ def main() -> int:
     folder = resolve(spec["dossier"])
     score = {"position": 0, "adversaires": 0, "a_payer": 0}
     n = 0
-    print(f"Modèle {claude['model']} · effort {claude.get('effort')} · {len(spec['cas'])} captures\n")
+    print(f"Modèle {claude['model']} · effort {claude.get('effort')} · {len(spec['cas'])} captures"
+          f" · lecture des sièges sans IA : {'oui' if seats else 'non'}\n")
     out_dir = resolve("eval/resultats")
     out_dir.mkdir(parents=True, exist_ok=True)
     raw_path = out_dir / f"{datetime.now():%Y-%m-%d_%H%M%S}_{claude['model']}.txt"
@@ -81,7 +87,8 @@ def main() -> int:
         if img is None:
             pretty.warn(f"Capture absente : {folder / case['fichier']}.png")
             continue
-        a = adv.ask(img)
+        facts = seats.read(img) if seats else None
+        a = adv.ask(img, facts=facts.prompt() if facts else None)
         if not a.ok:
             print(f"  {case['fichier']}  " + pretty.c(f"ERREUR {a.error}", pretty.RED))
             continue

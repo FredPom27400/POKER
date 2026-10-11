@@ -43,6 +43,14 @@ dedupe:
   min_seconds_between_calls: 2.0
   max_retries_per_turn: 2
   retry_delay: 3.0
+seats:                       # position et adversaires lus sans IA (calibrate.py --seats)
+  enabled: false
+  points: []
+  ref_width: 0
+  dealer_template: templates/dealer.png
+  cardback_template: templates/cardback.png
+  dealer_threshold: 0.6
+  card_threshold: 0.75
 ui:
   enabled: true
   hotkey: <ctrl>+<alt>+p

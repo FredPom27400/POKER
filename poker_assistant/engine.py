@@ -14,6 +14,7 @@ from . import pretty
 from .claude_client import Advice
 from .detection import Debouncer, TableVisibility, TurnDetector
 from .journal import DecisionLogger
+from .seats import SeatReader
 from .state import TurnTracker, signature
 
 
@@ -43,6 +44,7 @@ class Engine:
         self.visibility = TableVisibility(cfg["detection"].get("table_ref"),
                                           cfg["detection"].get("min_table_similarity", 0.0))
         self._hidden = False
+        self.seats = SeatReader(cfg["seats"]) if cfg.get("seats", {}).get("enabled") else None
         self.tracker = TurnTracker(cfg["dedupe"])
         self.paused = threading.Event()
         self.stopped = threading.Event()
@@ -51,6 +53,7 @@ class Engine:
         params = inspect.signature(ask).parameters if ask is not None else {}
         self._streams = "on_text" in params
         self._with_history = "history" in params
+        self._with_facts = "facts" in params
         self._history: list[tuple[float, str]] = []   # (instant, résumé) des conseils récents
 
     # --- contrôle -------------------------------------------------------
@@ -94,12 +97,16 @@ class Engine:
             is_turn = False
         was_turn = self.tracker.in_turn
         if self.tracker.should_call(is_turn, signature(table, self.cfg["action_bar"]), d.layout):
-            pretty.turn(self.tracker.reason, describe(d))
+            facts = self.seats.read(table) if self.seats is not None and self.seats.ready else None
+            detail = describe(d)
+            if facts is not None:
+                detail += f" · lu sans IA : {facts.position}, {facts.opponents} adv., bouton {facts.button}"
+            pretty.turn(self.tracker.reason, detail)
             self._emit("thinking", "Analyse en cours…")
             if self.ask is None:
                 self._results.put((table, Advice(True, "(dry-run : pas d'appel API)")))
             else:
-                self._pool.submit(self._call, table)
+                self._pool.submit(self._call, table, facts.prompt() if facts is not None else None)
         elif was_turn and not is_turn:
             self._emit("status", "En attente de ton tour")
             if self.tracker.calls_this_turn:
@@ -116,9 +123,11 @@ class Engine:
         if f["action"]:
             self._history.append((time.monotonic(), f"{f['lecture'] or '?'} → {f['action']}"))
 
-    def _call(self, table: np.ndarray) -> None:
+    def _call(self, table: np.ndarray, facts: str | None = None) -> None:
         try:
             kwargs = {}
+            if facts and self._with_facts:
+                kwargs["facts"] = facts
             if self._streams:
                 kwargs["on_text"] = lambda t: self._emit("advice", t)
             if self._with_history:

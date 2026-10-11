@@ -60,6 +60,16 @@ DEFAULTS: dict[str, Any] = {
         "max_retries_per_turn": 2,
         "retry_delay": 3.0,
     },
+    # Lecture locale de la position et des adversaires en jeu (calibrate.py --seats).
+    "seats": {
+        "enabled": False,
+        "points": [],               # nom de chaque joueur (fractions de la table), moi compris
+        "ref_width": 0,             # largeur de la table à la calibration
+        "dealer_template": "templates/dealer.png",
+        "cardback_template": "templates/cardback.png",
+        "dealer_threshold": 0.6,
+        "card_threshold": 0.75,
+    },
     "ui": {
         "enabled": True,
         "hotkey": "<ctrl>+<alt>+p",

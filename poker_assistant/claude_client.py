@@ -27,6 +27,8 @@ Positions, méthode obligatoire :
 4. Ma position : BTN, SB, BB, sinon en remontant depuis le bouton : CO (juste avant le bouton), HJ, MP… ; le premier à parler après la grosse blinde est UTG.
 5. Après le flop, les mises de blindes ont disparu : la position se déduit uniquement du jeton D et du sens du jeu (elle ne change pas pendant la main). Si mes analyses précédentes de la même main donnent ma position, reprends-la.
 
+Si mon message contient des « faits mesurés automatiquement » (position, bouton, adversaires en jeu), ils sont exacts : reprends-les tels quels dans SIEGES et LECTURE.
+
 Fais cette analyse en silence et n'écris que le résultat final : pas de « à vérifier », pas de correction, une seule ligne de chaque.
 
 Format de réponse strict et court, en texte brut :
@@ -39,12 +41,16 @@ NOTE : uniquement si une information illisible pourrait changer la décision, en
 USER_TEXT = "C'est mon tour. Quelle est la meilleure action ? Réponds en texte brut, sans markdown."
 
 
-def user_text(history: list[str] | None) -> str:
-    if not history:
-        return USER_TEXT
-    lines = "\n".join(f"- {h}" for h in history)
-    return (f"Mes analyses précédentes des dernières minutes, de la plus ancienne à la plus récente "
-            f"(c'est la même main si mes cartes sont identiques ; sinon, ignore-les) :\n{lines}\n\n{USER_TEXT}")
+def user_text(history: list[str] | None, facts: str | None = None) -> str:
+    parts = []
+    if history:
+        lines = "\n".join(f"- {h}" for h in history)
+        parts.append(f"Mes analyses précédentes des dernières minutes, de la plus ancienne à la plus récente "
+                     f"(c'est la même main si mes cartes sont identiques ; sinon, ignore-les) :\n{lines}")
+    if facts:
+        parts.append(facts)
+    parts.append(USER_TEXT)
+    return "\n\n".join(parts)
 
 
 @dataclass
@@ -130,14 +136,14 @@ class ClaudeAdvisor:
             return stream.get_final_message()
 
     def ask(self, table_bgr: np.ndarray, on_text: Callable[[str], None] | None = None,
-            history: list[str] | None = None) -> Advice:
+            history: list[str] | None = None, facts: str | None = None) -> Advice:
         t0 = time.monotonic()
         timing: dict = {}
         png = encode_png(table_bgr, self.cfg["max_image_width"])
         content = [
             {"type": "image", "source": {"type": "base64", "media_type": "image/png",
                                          "data": base64.standard_b64encode(png).decode()}},
-            {"type": "text", "text": user_text(history)},
+            {"type": "text", "text": user_text(history, facts)},
         ]
         kwargs = dict(
             model=self.cfg["model"],

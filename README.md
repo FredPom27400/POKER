@@ -30,6 +30,18 @@ Pour ajouter le second template sans refaire les régions, relance pendant l'aut
 `python calibrate.py --template-only`. Tu peux aussi calibrer depuis une capture plein écran
 enregistrée : `python calibrate.py --image capture.png`.
 
+### Lecture des sièges sans IA (recommandé)
+
+À la fin de la calibration (ou plus tard avec `calibrer.bat --seats`), pendant ton tour :
+1. clique sur le **nom de chaque joueur**, toi compris, puis Entrée ;
+2. entoure le **jeton D** (juste le rond) ;
+3. entoure le **symbole W** d'une carte d'un adversaire encore en jeu (sans le bord de la carte).
+
+Le programme mesure alors lui-même, sur chaque capture, le bouton, ta position et les adversaires
+encore en jeu (cartes « W » présentes), et les donne à Claude comme faits fiables. Sur 34 captures
+réelles annotées : 34/34 pour la position et le nombre d'adversaires. Si le nombre de joueurs assis
+change (siège vide), refais `calibrer.bat --seats`.
+
 ## 2. Vérifier la détection
 
 Dépose des captures dans `samples/` en indiquant l'état dans le nom
