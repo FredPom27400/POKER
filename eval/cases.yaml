@@ -19,3 +19,22 @@ cas:
   - {fichier: "135058_649", cartes: "6♦ 3♦", position: [BTN], adversaires: 3, a_payer: 1}
   - {fichier: "135116_430", cartes: "6♦ 3♦", position: [BTN], adversaires: 3, a_payer: 4}
   - {fichier: "135155_448", cartes: "A♠ 6♠", position: [CO], adversaires: 3, a_payer: 1}
+  # 2e session (6 joueurs)
+  - {fichier: "135415_000", cartes: "6♥ 3♥", position: [CO], adversaires: 3, a_payer: 1}
+  - {fichier: "135448_563", cartes: "Q♥ 8♦", position: [UTG, HJ], adversaires: 4, a_payer: 1}
+  - {fichier: "135524_530", cartes: "9♥ 3♥", position: [BB], adversaires: 1, a_payer: 2}
+  - {fichier: "135538_728", cartes: "6♥ 2♦", position: [SB], adversaires: 2, a_payer: 0.5}
+  - {fichier: "135631_046", cartes: "K♠ 2♥", position: [BTN], adversaires: 2, a_payer: 1}
+  - {fichier: "135651_775", cartes: "J♥ 7♣", position: [CO], adversaires: 4, a_payer: 3}
+  - {fichier: "135709_574", cartes: "T♣ 6♦", position: [UTG, HJ], adversaires: 4, a_payer: 1}
+  - {fichier: "135810_395", cartes: "T♣ 3♣", position: [BB], adversaires: 1, a_payer: 1.5}
+  - {fichier: "135829_628", cartes: "Q♦ 3♣", position: [SB], adversaires: 1, a_payer: 0.5}
+  - {fichier: "135841_338", cartes: "8♠ 6♥", position: [BTN], adversaires: 2, a_payer: 1}
+  - {fichier: "135853_534", cartes: "K♥ 3♥", position: [CO], adversaires: 3, a_payer: 1}
+  - {fichier: "135911_220", cartes: "A♥ K♦", position: [UTG, HJ], adversaires: 4, a_payer: 1}
+  - {fichier: "135938_581", cartes: "K♠ 5♠", position: [BB], adversaires: 1, a_payer: 1.5}
+  - {fichier: "140000_361", cartes: "K♠ 5♠", position: [BB], adversaires: 1, a_payer: 8.5}
+  - {fichier: "140008_961", cartes: "K♠ 5♠", position: [BB], adversaires: 1, a_payer: 0}
+  - {fichier: "140017_515", cartes: "K♠ 5♠", position: [BB], adversaires: 1, a_payer: 17}
+  - {fichier: "140035_782", cartes: "K♠ 5♠", position: [BB], adversaires: 1, a_payer: 56.5}
+  - {fichier: "140055_481", cartes: "J♠ 7♦", position: [SB], adversaires: 2, a_payer: 2.5}
