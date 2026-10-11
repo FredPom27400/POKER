@@ -65,7 +65,10 @@ def main() -> int:
         spec = yaml.safe_load(f)
     cfg = load_config(args.config)
     claude = cfg["claude"]
-    seats = SeatReader(cfg["seats"]) if cfg["seats"].get("enabled") else None
+    seat_cfg = dict(cfg["seats"])
+    if spec.get("sieges"):   # sièges propres aux captures du jeu de test (ancien cadrage)
+        seat_cfg.update(points=spec["sieges"], ref_width=0)
+    seats = SeatReader(seat_cfg) if cfg["seats"].get("enabled") else None
     if seats is not None and not seats.ready:
         seats = None
     if args.model:
