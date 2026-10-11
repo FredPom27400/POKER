@@ -291,3 +291,12 @@ def test_lecture_summary():
     assert lecture_summary("K♦ 9♠ | préflop, pas de board | BTN | 1 adversaire (X) | 7,5 BB") == \
         "K♦ 9♠  ·  préflop  ·  BTN  ·  1 adversaire (X)  ·  à payer 7,5 BB"
     assert lecture_summary("A♣ 8♣ | J♦ Q♦ 4♦ | BB | 1 | 0") == "A♣ 8♣  ·  J♦ Q♦ 4♦  ·  BB  ·  1 adv.  ·  rien à payer"
+
+
+def test_style_in_system_prompt():
+    adv, msgs = advisor_with(lambda kw: ok_resp(), style="tag")
+    adv.ask(make_table(True))
+    assert "serré-agressif" in msgs.kwargs["system"]
+    adv, msgs = advisor_with(lambda kw: ok_resp(), style="equilibre")
+    adv.ask(make_table(True))
+    assert "Style de jeu" not in msgs.kwargs["system"]

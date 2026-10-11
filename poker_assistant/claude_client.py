@@ -50,6 +50,27 @@ ACTION : une seule action parmi Fold / Check / Call / Bet X BB / Raise to X BB /
 RAISON : 1 à 2 phrases maximum
 NOTE : uniquement si une information illisible pourrait changer la décision, en une ligne ; n'invente jamais une information illisible."""
 
+STYLES = {
+    "tag": "Style de jeu demandé : serré-agressif (TAG). Joue des ranges plutôt serrées, mais quand tu entres dans un "
+           "coup, préfère relancer ou miser plutôt que suivre ; mise fort pour la valeur (les adversaires des petites "
+           "limites paient trop) ; bluffe peu et surtout avec des tirages ; couche-toi sans hésiter sans main ni tirage "
+           "face à de l'agressivité.",
+    "lag": "Style de jeu demandé : large-agressif (LAG). Ouvre et 3-bet plus large que les repères, mets la pression en "
+           "position, multiplie les c-bets et les barrels avec des bluffs crédibles, mais renonce aux bluffs face à un "
+           "joueur qui paie tout.",
+    "rock": "Style de jeu demandé : serré-passif. Joue nettement plus serré que les repères, évite les bluffs, contrôle "
+            "la taille des pots sans main forte.",
+    "equilibre": "",
+}
+
+
+def system_prompt(style: str | None) -> str:
+    """Prompt système, avec la consigne de style (tag, lag, rock, equilibre)."""
+    line = STYLES.get((style or "equilibre").lower(), "")
+    return SYSTEM_PROMPT.replace("\n\nComment lire la table", f"\n\n{line}\n\nComment lire la table", 1) if line \
+        else SYSTEM_PROMPT
+
+
 USER_TEXT = "C'est mon tour. Quelle est la meilleure action ? Réponds en texte brut, sans markdown."
 
 
@@ -158,7 +179,7 @@ class ClaudeAdvisor:
         kwargs = dict(
             model=self.cfg["model"],
             max_tokens=self.cfg["max_tokens"],
-            system=SYSTEM_PROMPT,
+            system=system_prompt(self.cfg.get("style")),
             messages=[{"role": "user", "content": content}],
         )
         if self.cfg.get("effort"):
