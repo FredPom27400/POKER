@@ -87,3 +87,16 @@ def test_any_table_size(tmp_path, n_seats, occupied, btn, cards, bets, pos, opp)
 def test_not_ready_without_templates(tmp_path):
     r = SeatReader({"dealer_templates": [str(tmp_path / "x.png")], "cardback_templates": []})
     assert not r.ready and r.read(np.zeros((10, 10, 3), np.uint8)) is None
+
+
+def test_other_theme_still_visible(tmp_path):
+    """Table d'un autre thème (couleurs différentes de la référence) : pas « masquée »."""
+    from poker_assistant.detection import TableVisibility
+    dealer, card = _templates(tmp_path)
+    ref = np.full((H, W, 3), (20, 120, 40), np.uint8)          # tapis vert de la calibration
+    cv2.imwrite(str(tmp_path / "ref.png"), ref)
+    vis = TableVisibility(str(tmp_path / "ref.png"), 0.6)
+    other = make_table(dealer, card, 6, [0, 2, 4], 2, [2])     # autre fond, joueurs visibles
+    assert vis.similarity(other) < 0.6 and vis.visible(other)
+    covered = np.full((H, W, 3), (235, 235, 235), np.uint8)    # fenêtre claire devant
+    assert not vis.visible(covered)

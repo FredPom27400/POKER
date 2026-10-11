@@ -216,6 +216,9 @@ class TableVisibility:
     référence enregistrée par calibrate.py. Cartes, jetons et joueurs changent
     peu les couleurs d'ensemble (similarité ~0,97-1), alors qu'une fenêtre
     devant la table la fait chuter (~0,3).
+    Un autre thème graphique (fond, tapis) change aussi les couleurs : la table
+    reste alors jugée visible si on y retrouve au moins deux joueurs assis
+    (tapis jaune sous un nom blanc), ce qui ne dépend pas du thème.
     """
 
     def __init__(self, ref_path: str | None, min_similarity: float):
@@ -230,4 +233,7 @@ class TableVisibility:
 
     def visible(self, table: np.ndarray) -> bool:
         sim = self.similarity(table)
-        return sim is None or sim >= self.min_similarity
+        if sim is None or sim >= self.min_similarity:
+            return True
+        from .seats import find_players
+        return len(find_players(table)) >= 2
