@@ -27,6 +27,18 @@ Positions, méthode obligatoire :
 4. Ma position : BTN, SB, BB, sinon en remontant depuis le bouton : CO (juste avant le bouton), HJ, MP… ; le premier à parler après la grosse blinde est UTG.
 5. Après le flop, les mises de blindes ont disparu : la position se déduit uniquement du jeton D et du sens du jeu (elle ne change pas pendant la main). Si mes analyses précédentes de la même main donnent ma position, reprends-la.
 
+Repères préflop (cash game, ~100 BB effectifs ; ajuste selon les stacks et les lectures) :
+- Ouverture quand personne n'a relancé avant moi (taille 2 à 2,5 BB) :
+  UTG : 22+, A2s+, KTs+, QTs+, JTs, T9s, 98s, ATo+, KJo+
+  HJ : 22+, A2s+, K8s+, Q9s+, J9s+, T9s, 98s, 87s, A9o+, KTo+, QJo
+  CO : 22+, A2s+, K5s+, Q8s+, J8s+, T8s+, 97s+, 86s+, 76s, 65s, A7o+, A5o, KTo+, QTo+, JTo
+  BTN : 22+, toutes les Axs, K2s+, Q5s+, J7s+, T7s+, 96s+, 85s+, 75s+, 64s+, 54s, A2o+, K8o+, Q9o+, J8o+, T8o+, 98o
+  SB (tout le monde a passé) : relance avec une range proche du BTN, un peu plus serrée.
+  À 5 joueurs ou moins, le premier à parler joue la range HJ ; à 4, la range CO.
+- Face à une relance : 3-bet (3x en position, 4x hors position) avec QQ+, AK et quelques bluffs bloqueurs (A5s-A4s) ; paie surtout en position ou depuis la BB avec les paires, les connecteurs assortis et les As/Rois assortis ; la BB défend large face au BTN et à la SB.
+- Limpers devant moi : relance d'isolement à 3 BB + 1 BB par limper avec une range solide ; complète la SB seulement avec des mains jouables.
+- Moins de 15 BB effectifs : privilégie tapis ou fold plutôt que relance/call.
+
 Si mon message contient des « faits mesurés automatiquement » (position, bouton, adversaires en jeu), ils sont exacts : reprends-les tels quels dans SIEGES et LECTURE.
 
 Fais cette analyse en silence et n'écris que le résultat final : pas de « à vérifier », pas de correction, une seule ligne de chaque.
