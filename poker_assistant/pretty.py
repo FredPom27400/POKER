@@ -92,12 +92,12 @@ def action_hex(action: str) -> str:
 
 def parse_fields(text: str) -> dict:
     """Sépare LECTURE, ACTION, RAISON et les remarques (incertitudes, notes…)."""
-    f = {"sieges": "", "lecture": "", "action": "", "reason": "", "notes": []}
+    f = {"sieges": "", "lecture": "", "action": "", "keys": "", "reason": "", "notes": []}
     for raw in text.splitlines():
         line = raw.strip().lstrip("-•* ").strip()
         if not line:
             continue
-        m = re.match(r"(SI[EÈ]GES|LECTURE|ACTION|RAISON|REASON|NOTE|REMARQUE|INCERTAIN\w*)\s*:\s*(.*)", line, re.I)
+        m = re.match(r"(SI[EÈ]GES|LECTURE|ACTION|TOUCHES?|RAISON|REASON|NOTE|REMARQUE|INCERTAIN\w*)\s*:\s*(.*)", line, re.I)
         key = m.group(1).upper() if m else ""
         if key in ("SIEGES", "SIÈGES") and not f["sieges"]:
             f["sieges"] = m.group(2).strip()
@@ -105,6 +105,8 @@ def parse_fields(text: str) -> dict:
             f["lecture"] = m.group(2).strip()
         elif key == "ACTION" and not f["action"]:
             f["action"] = m.group(2).strip()
+        elif key.startswith("TOUCHE") and not f["keys"]:
+            f["keys"] = m.group(2).strip()
         elif key in ("RAISON", "REASON") and not f["reason"]:
             f["reason"] = m.group(2).strip()
         else:
@@ -162,7 +164,8 @@ def advice(text: str, timing: str = "", model: str = "") -> None:
     if f["lecture"]:
         _out(_labelled("LU", f["lecture"].replace("|", "·"), GREY, GREY))
     if action:
-        _out(f"  {c('ACTION', GREY)}  " + c(f"▌{action.upper()}", *action_color(action)))
+        keys = c(f"   ⌨ {f['keys']}", BOLD, CYAN) if f["keys"] else ""
+        _out(f"  {c('ACTION', GREY)}  " + c(f"▌{action.upper()}", *action_color(action)) + keys)
     if reason:
         _out(_labelled("RAISON", reason, GREY))
     for n in notes:

@@ -300,3 +300,14 @@ def test_style_in_system_prompt():
     adv, msgs = advisor_with(lambda kw: ok_resp(), style="equilibre")
     adv.ask(make_table(True))
     assert "Style de jeu" not in msgs.kwargs["system"]
+
+
+def test_shortcuts_in_prompt_and_keys_parsed():
+    from poker_assistant.claude_client import system_prompt
+    from poker_assistant.config import DEFAULTS
+    from poker_assistant.pretty import parse_fields
+    p = system_prompt("tag", DEFAULTS["claude"]["shortcuts"])
+    assert "x2.5 (F4)" in p and "65% (F5)" in p and "TOUCHES" in p
+    assert "TOUCHES" not in system_prompt("tag", None)
+    f = parse_fields("ACTION : Raise to 2,5 BB\nTOUCHES : F4 puis F3\nRAISON : r")
+    assert f["keys"] == "F4 puis F3" and f["notes"] == []

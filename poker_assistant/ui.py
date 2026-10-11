@@ -48,6 +48,7 @@ class AdviceWindow:
             return lab
 
         self.action = label(("Segoe UI", fs + 12, "bold"), WHITE)
+        self.keys = label(("Consolas", fs + 4, "bold"), "#5ed8ff", (0, 2))
         self.info = label(("Segoe UI", fs - 1), GREY, (2, 8))
         self.reason = label(("Segoe UI", fs), WHITE)
         self.note = label(("Segoe UI", fs - 1, "italic"), YELLOW, (8, 0))
@@ -69,7 +70,7 @@ class AdviceWindow:
     def _message(self, text: str, color: str) -> None:
         """Message simple (attente, analyse, erreur) à la place du conseil."""
         self.action.config(text=text, font=self._msg_font, fg=color)
-        for lab in (self.info, self.reason, self.note):
+        for lab in (self.keys, self.info, self.reason, self.note):
             lab.config(text="")
 
     def _show_advice(self, text: str) -> None:
@@ -79,6 +80,7 @@ class AdviceWindow:
             return
         self.action.config(text=(f["action"] or "…").upper(), font=self._big_font,
                            fg=action_hex(f["action"]) if f["action"] else GREY)
+        self.keys.config(text=f"⌨  {f['keys']}" if f["keys"] else "")
         self.info.config(text=lecture_summary(f["lecture"]) if f["lecture"] else "")
         self.reason.config(text=f["reason"])
         self.note.config(text="\n".join(f["notes"]))

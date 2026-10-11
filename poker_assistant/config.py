@@ -13,7 +13,17 @@ DEFAULT_CONFIG_PATH = ROOT / "config.yaml"
 DEFAULTS: dict[str, Any] = {
     "claude": {
         "model": "claude-opus-5-5",
-        "style": "tag",             # tag (serré-agressif) | lag | rock | equilibre
+        "style": "tag",
+        # Raccourcis du client poker : Claude choisit ces tailles et affiche les touches à presser.
+        "shortcuts": {
+            "fold": "F1", "call": "F2", "raise": "F3",
+            "presets": [
+                {"key": "F4", "preflop": "x2.5", "postflop": "35%"},
+                {"key": "F5", "preflop": "x3", "postflop": "65%"},
+                {"key": "F6", "preflop": "Pot", "postflop": "Pot"},
+                {"key": "F7", "preflop": "All-in", "postflop": "All-in"},
+            ],
+        },             # tag (serré-agressif) | lag | rock | equilibre
         "effort": "low",            # low = réponse rapide
         "thinking": "auto",         # off = sans réflexion (Sonnet 5.5 / Haiku 5.5 seulement)
         "speed": "fast",            # fast = mode rapide d'Opus (même modèle, ~2x le prix) ; normal sinon

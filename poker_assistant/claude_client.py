@@ -47,6 +47,7 @@ Format de réponse strict et court, en texte brut :
 SIEGES : moi puis chaque joueur assis dans le sens du jeu, avec son rôle (BTN, SB, BB) et « out » s'il a passé
 LECTURE : mes cartes | board | ma position | nombre d'adversaires encore en jeu (sans me compter) | montant à payer en BB (0 si CHECK)
 ACTION : une seule action parmi Fold / Check / Call / Bet X BB / Raise to X BB / All-in, sans reformulation
+TOUCHES : touches du clavier pour jouer cette action (voir les raccourcis ci-dessus)
 RAISON : 1 à 2 phrases maximum
 NOTE : uniquement si une information illisible pourrait changer la décision, en une ligne ; n'invente jamais une information illisible."""
 
@@ -64,11 +65,34 @@ STYLES = {
 }
 
 
-def system_prompt(style: str | None) -> str:
-    """Prompt système, avec la consigne de style (tag, lag, rock, equilibre)."""
+def shortcuts_prompt(sc: dict | None) -> str:
+    """Raccourcis du client : tailles de mise préréglées et touches d'action."""
+    if not sc or not sc.get("presets"):
+        return ""
+    pre = ", ".join(f"{p['preflop']} ({p['key']})" for p in sc["presets"])
+    post = ", ".join(f"{p['postflop']} ({p['key']})" for p in sc["presets"])
+    return (f"Raccourcis de mon client : Fold/Check {sc.get('fold', 'F1')}, Check/Call {sc.get('call', 'F2')}, "
+            f"Bet/Raise {sc.get('raise', 'F3')} (valide le montant affiché).\n"
+            f"Tailles préréglées en une touche - préflop : {pre} (x2.5 et x3 multiplient la dernière mise, "
+            f"la grosse blinde si personne n'a relancé) ; après le flop : {post} (en % du pot).\n"
+            f"Choisis de préférence une de ces tailles pour Bet/Raise, quand elle convient à peu près, et indique les "
+            f"touches dans TOUCHES : par exemple « {sc.get('fold', 'F1')} » pour Fold, « {sc.get('call', 'F2')} » pour "
+            f"Check/Call, « {sc['presets'][0]['key']} puis {sc.get('raise', 'F3')} » pour une relance préréglée, "
+            f"« taper 4 puis {sc.get('raise', 'F3')} » si aucune taille préréglée ne convient.")
+
+
+def system_prompt(style: str | None, shortcuts: dict | None = None) -> str:
+    """Prompt système, avec la consigne de style (tag, lag, rock, equilibre) et les raccourcis."""
+    prompt = SYSTEM_PROMPT
     line = STYLES.get((style or "equilibre").lower(), "")
-    return SYSTEM_PROMPT.replace("\n\nComment lire la table", f"\n\n{line}\n\nComment lire la table", 1) if line \
-        else SYSTEM_PROMPT
+    if line:
+        prompt = prompt.replace("\n\nComment lire la table", f"\n\n{line}\n\nComment lire la table", 1)
+    sc = shortcuts_prompt(shortcuts)
+    if sc:
+        prompt = prompt.replace("\n\nSi mon message contient", f"\n\n{sc}\n\nSi mon message contient", 1)
+    else:
+        prompt = prompt.replace("TOUCHES : touches du clavier pour jouer cette action (voir les raccourcis ci-dessus)\n", "")
+    return prompt
 
 
 USER_TEXT = "C'est mon tour. Quelle est la meilleure action ? Réponds en texte brut, sans markdown."
@@ -179,7 +203,7 @@ class ClaudeAdvisor:
         kwargs = dict(
             model=self.cfg["model"],
             max_tokens=self.cfg["max_tokens"],
-            system=system_prompt(self.cfg.get("style")),
+            system=system_prompt(self.cfg.get("style"), self.cfg.get("shortcuts")),
             messages=[{"role": "user", "content": content}],
         )
         if self.cfg.get("effort"):
