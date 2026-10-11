@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import re
 import time
 from dataclasses import dataclass
 from typing import Callable
@@ -72,13 +73,15 @@ def shortcuts_prompt(sc: dict | None) -> str:
         return ""
     pre = ", ".join(f"{p['preflop']} ({p['key']})" for p in sc["presets"])
     post = ", ".join(f"{p['postflop']} ({p['key']})" for p in sc["presets"])
-    return (f"Raccourcis de mon client : Fold/Check {sc.get('fold', 'F1')}, Check/Call {sc.get('call', 'F2')}, "
-            f"Bet/Raise {sc.get('raise', 'F3')} (valide le montant affiché).\n"
+    fold, call = sc.get('fold', 'F1'), sc.get('call', 'F2')
+    return (f"Touches de mon client : Fold = {fold} ; Check = {call} ; Call = {call} ; "
+            f"Bet/Raise {sc.get('raise', 'F3')} (valide le montant affiché). "
+            f"N'indique jamais {fold} pour un Check.\n"
             f"Tailles préréglées en une touche - préflop : {pre} (x2.5 et x3 multiplient la dernière mise, "
             f"la grosse blinde si personne n'a relancé) ; après le flop : {post} (en % du pot).\n"
             f"Choisis de préférence une de ces tailles pour Bet/Raise, quand elle convient à peu près, et indique les "
-            f"touches dans TOUCHES : par exemple « {sc.get('fold', 'F1')} » pour Fold, « {sc.get('call', 'F2')} » pour "
-            f"Check/Call, « {sc['presets'][0]['key']} puis {sc.get('raise', 'F3')} » pour une relance préréglée, "
+            f"touches dans TOUCHES : par exemple « {fold} » pour Fold, « {call} » pour "
+            f"Check ou Call, « {sc['presets'][0]['key']} puis {sc.get('raise', 'F3')} » pour une relance préréglée, "
             f"« taper 4 puis {sc.get('raise', 'F3')} » si aucune taille préréglée ne convient.")
 
 
@@ -248,7 +251,19 @@ class ClaudeAdvisor:
         text = _clean("\n".join(b.text for b in resp.content if b.type == "text"))
         if not text:
             return Advice(False, "", resp.model, error=f"Réponse vide (stop_reason={resp.stop_reason})", **stats)
-        return Advice(True, text, resp.model, **stats)
+        return Advice(True, fix_keys(text, self.cfg.get("shortcuts")), resp.model, **stats)
+
+
+def fix_keys(text: str, sc: dict | None) -> str:
+    """Filet de sécurité : un Check ne doit jamais être joué avec la touche Fold
+    (Check/Fold couche la main si quelqu'un a misé entre-temps)."""
+    if not sc:
+        return text
+    fold, call = sc.get("fold", "F1"), sc.get("call", "F2")
+    m = re.search(r"^\s*ACTION\s*:\s*(\w+)", text, re.I | re.M)
+    if m and m.group(1).lower() in ("check", "call"):
+        text = re.sub(rf"^(\s*TOUCHES?\s*:\s*){re.escape(fold)}\b", rf"\g<1>{call}", text, flags=re.I | re.M)
+    return text
 
 
 def _clean(text: str) -> str:

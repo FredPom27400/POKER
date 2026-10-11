@@ -311,3 +311,12 @@ def test_shortcuts_in_prompt_and_keys_parsed():
     assert "TOUCHES" not in system_prompt("tag", None)
     f = parse_fields("ACTION : Raise to 2,5 BB\nTOUCHES : F4 puis F3\nRAISON : r")
     assert f["keys"] == "F4 puis F3" and f["notes"] == []
+
+
+def test_check_never_on_fold_key():
+    from poker_assistant.claude_client import fix_keys
+    from poker_assistant.config import DEFAULTS
+    sc = DEFAULTS["claude"]["shortcuts"]
+    assert "TOUCHES : F2" in fix_keys("ACTION : Check\nTOUCHES : F1\nRAISON : x", sc)
+    assert "TOUCHES : F1" in fix_keys("ACTION : Fold\nTOUCHES : F1", sc)
+    assert "TOUCHES : F4 puis F3" in fix_keys("ACTION : Bet 3 BB\nTOUCHES : F4 puis F3", sc)
