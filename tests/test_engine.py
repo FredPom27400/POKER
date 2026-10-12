@@ -224,7 +224,7 @@ def test_engine_streams_partial_text(tmp_path):
     got = []
     while not events.empty():
         got.append(events.get())
-    assert ("advice", "ACTION : Call") in got
+    assert ("partial", "ACTION : Call") in got
 
 
 def test_history_sent_on_next_call(tmp_path):

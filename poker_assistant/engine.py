@@ -136,7 +136,7 @@ class Engine:
             if facts and self._with_facts:
                 kwargs["facts"] = facts
             if self._streams:
-                kwargs["on_text"] = lambda t: self._emit("advice", t)
+                kwargs["on_text"] = lambda t: self._emit("partial", t)
             if self._with_history:
                 kwargs["history"] = self._recent_history()
             advice = self.ask(table, **kwargs)

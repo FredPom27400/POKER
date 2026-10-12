@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import queue
+import re
 import tkinter as tk
 from typing import Callable
 
@@ -91,6 +92,10 @@ class AdviceWindow:
                 kind, msg = self.events.get_nowait()
                 if kind == "advice":
                     self._show_advice(msg)
+                elif kind == "partial":
+                    # Réponse en cours : rien n'est affiché avant que la ligne ACTION soit complète.
+                    if re.search(r"^\s*ACTION[^\n:]*:[^\n]+\n", msg, re.M):
+                        self._show_advice(msg)
                 elif kind == "error":
                     self._message(msg, RED)
                 elif kind == "waiting":
