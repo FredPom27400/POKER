@@ -320,3 +320,12 @@ def test_check_never_on_fold_key():
     assert "TOUCHES : F2" in fix_keys("ACTION : Check\nTOUCHES : F1\nRAISON : x", sc)
     assert "TOUCHES : F1" in fix_keys("ACTION : Fold\nTOUCHES : F1", sc)
     assert "TOUCHES : F4 puis F3" in fix_keys("ACTION : Bet 3 BB\nTOUCHES : F4 puis F3", sc)
+
+
+def test_self_correction_last_action_wins():
+    from poker_assistant.pretty import lecture_summary, parse_fields
+    f = parse_fields("ACTION : Fold\nTOUCHES : F1\nRAISON : r\nCorrection : en fait si.\n"
+                     "ACTION finale : Raise to 2,5 BB\nTOUCHES : F4 puis F3\nNOTE : aucune.")
+    assert f["action"] == "Raise to 2,5 BB" and f["keys"] == "F4 puis F3"
+    assert f["notes"] == ["Correction : en fait si."]
+    assert lecture_summary("A♠ 9♦ | préflop | UTG | 4 | 1 BB à payer").endswith("à payer 1 BB")

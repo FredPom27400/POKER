@@ -48,10 +48,10 @@ Fais cette analyse en silence et n'écris que le résultat final : pas de « à 
 Format de réponse strict et court, en texte brut :
 SIEGES : moi puis chaque joueur assis dans le sens du jeu, avec son rôle (BTN, SB, BB) et « out » s'il a passé
 LECTURE : mes cartes | board | ma position | nombre d'adversaires encore en jeu (sans me compter) | montant à payer en BB (0 si CHECK)
-ACTION : une seule action parmi Fold / Check / Call / Bet X BB / Raise to X BB / All-in, sans reformulation
+RAISON : 1 à 2 phrases maximum, qui mènent à la décision (applique les repères ci-dessus avant de conclure)
+ACTION : une seule action parmi Fold / Check / Call / Bet X BB / Raise to X BB / All-in, cohérente avec RAISON, sans reformulation ni correction
 TOUCHES : touches du clavier pour jouer cette action (voir les raccourcis ci-dessus)
-RAISON : 1 à 2 phrases maximum
-NOTE : uniquement si une information illisible pourrait changer la décision, en une ligne ; n'invente jamais une information illisible."""
+NOTE : uniquement si une information illisible pourrait changer la décision, en une ligne ; sinon n'écris pas cette ligne. N'invente jamais une information illisible."""
 
 STYLES = {
     "tag": "Style de jeu demandé : serré-agressif (TAG). Joue des ranges plutôt serrées, mais quand tu entres dans un "
@@ -260,8 +260,8 @@ def fix_keys(text: str, sc: dict | None) -> str:
     if not sc:
         return text
     fold, call = sc.get("fold", "F1"), sc.get("call", "F2")
-    m = re.search(r"^\s*ACTION\s*:\s*(\w+)", text, re.I | re.M)
-    if m and m.group(1).lower() in ("check", "call"):
+    acts = re.findall(r"^\s*ACTION(?:\s+\w+)?\s*:\s*(\w+)", text, re.I | re.M)
+    if acts and acts[-1].lower() in ("check", "call"):
         text = re.sub(rf"^(\s*TOUCHES?\s*:\s*){re.escape(fold)}\b", rf"\g<1>{call}", text, flags=re.I | re.M)
     return text
 

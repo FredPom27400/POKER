@@ -97,21 +97,23 @@ def parse_fields(text: str) -> dict:
         line = raw.strip().lstrip("-•* ").strip()
         if not line:
             continue
-        m = re.match(r"(SI[EÈ]GES|LECTURE|ACTION|TOUCHES?|RAISON|REASON|NOTE|REMARQUE|INCERTAIN\w*)\s*:\s*(.*)", line, re.I)
+        m = re.match(r"(SI[EÈ]GES|LECTURE|ACTION|TOUCHES?|RAISON|REASON|NOTE|REMARQUE|INCERTAIN\w*)"
+                     r"(?:\s+(?:finale?|corrig[ée]e?s?))?\s*:\s*(.*)", line, re.I)
         key = m.group(1).upper() if m else ""
         if key in ("SIEGES", "SIÈGES") and not f["sieges"]:
             f["sieges"] = m.group(2).strip()
         elif key == "LECTURE" and not f["lecture"]:
             f["lecture"] = m.group(2).strip()
-        elif key == "ACTION" and not f["action"]:
-            f["action"] = m.group(2).strip()
-        elif key.startswith("TOUCHE") and not f["keys"]:
+        elif key == "ACTION":
+            f["action"] = m.group(2).strip()      # en cas de correction, la dernière l'emporte
+        elif key.startswith("TOUCHE"):
             f["keys"] = m.group(2).strip()
         elif key in ("RAISON", "REASON") and not f["reason"]:
             f["reason"] = m.group(2).strip()
         else:
-            f["notes"].append(m.group(2).strip() if key in ("NOTE", "REMARQUE") or key.startswith("INCERTAIN")
-                              else line)
+            note = m.group(2).strip() if key in ("NOTE", "REMARQUE") or key.startswith("INCERTAIN") else line
+            if not re.match(r"(aucun|rien|néant|ras\b|-$)", note, re.I):   # « NOTE : aucune » n'apporte rien
+                f["notes"].append(note)
     return f
 
 
@@ -125,6 +127,7 @@ def lecture_summary(lecture: str) -> str:
         parts[3] = f"{parts[3]} adv."
     if len(parts) >= 5:
         pay = parts[4]
+        pay = re.sub(r"\s*à payer\s*$", "", re.sub(r"^à payer\s*", "", pay))
         parts[4] = "rien à payer" if re.fullmatch(r"0(\s*BB)?|0 \(.*\)", pay) else f"à payer {pay}"
     return "  ·  ".join(p for p in parts if p)
 
