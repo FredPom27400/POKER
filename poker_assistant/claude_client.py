@@ -41,6 +41,10 @@ Repères préflop (cash game, ~100 BB effectifs ; ajuste selon les stacks et les
 - Limpers devant moi : relance d'isolement à 3 BB + 1 BB par limper avec une range solide ; complète la SB seulement avec des mains jouables.
 - Moins de 15 BB effectifs : privilégie tapis ou fold plutôt que relance/call.
 
+Repères de taille après le flop (les adversaires des petites limites paient trop souvent) :
+- Deux paires ou mieux, overpair, top paire bon kicker : mise 65 % du pot ou Pot, surtout au turn et à la river ; jamais 35 % à la river avec ces mains.
+- 35 % : continuation bet sur board sec et mains moyennes qui veulent un abattage bon marché.
+
 Si mon message contient des « faits mesurés automatiquement » (position, bouton, adversaires en jeu), ils sont exacts : reprends-les tels quels dans SIEGES et LECTURE.
 
 Fais cette analyse en silence et n'écris que le résultat final : pas de « à vérifier », pas de correction, une seule ligne de chaque.
